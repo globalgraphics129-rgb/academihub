@@ -3,21 +3,9 @@ import { useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
-const DEPARTMENTS = [
-  'Computer Science', 'Electrical Engineering', 'Mechanical Engineering',
-  'Civil Engineering', 'Biochemistry', 'Physics', 'Mathematics',
-  'Mass Communication', 'Business Administration', 'Accounting',
-  'Chemistry', 'Microbiology', 'Statistics', 'Architecture',
-  'Agricultural Science', 'Law', 'Medicine', 'Pharmacy',
-  'Nursing', 'Education', 'Economics', 'Sociology', 'Political Science',
-  'Geography', 'History', 'Philosophy', 'Religious Studies', 'English',
-  'French', 'Linguistics'
-]
-
 export default function RegisterDepartment() {
   const [form, setForm] = useState({
     department: '',
-    customDepartment: '',
     repName: '',
     repEmail: '',
     repPhone: '',
@@ -26,11 +14,9 @@ export default function RegisterDepartment() {
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
 
-  const department = form.department === '__other__' ? form.customDepartment : form.department
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!department || !form.repName || !form.repEmail || !form.numberOfGroups) {
+    if (!form.department || !form.repName || !form.repEmail || !form.numberOfGroups) {
       toast.error('Please fill in all required fields')
       return
     }
@@ -43,7 +29,7 @@ export default function RegisterDepartment() {
       const res = await fetch('/api/register-department', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, department }),
+        body: JSON.stringify(form),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Registration failed')
@@ -73,7 +59,7 @@ export default function RegisterDepartment() {
             Department Registered!
           </h2>
           <p style={{ color: 'var(--text-2)', fontSize: 15, lineHeight: 1.7, marginBottom: 32 }}>
-            <strong style={{ color: 'var(--text)' }}>{department}</strong> is now active on the platform.
+            <strong style={{ color: 'var(--text)' }}>{form.department}</strong> is now active on the platform.
             A confirmation has been sent to <strong style={{ color: 'var(--violet-light)' }}>{form.repEmail}</strong>.
             Share the submission link with your group leaders.
           </p>
@@ -107,7 +93,7 @@ export default function RegisterDepartment() {
             Register Your Department
           </h1>
           <p style={{ color: 'var(--text-2)', fontSize: 15, lineHeight: 1.6 }}>
-            Class reps: register your department so your groups can start submitting their projects.
+            Class reps: enter your department name so your groups can start submitting their projects.
           </p>
         </div>
 
@@ -136,30 +122,18 @@ export default function RegisterDepartment() {
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <label className="label">Department *</label>
-                <select
-                  className="input select"
+                <label className="label">Department Name *</label>
+                <input
+                  className="input"
                   value={form.department}
                   onChange={e => setForm(f => ({ ...f, department: e.target.value }))}
+                  placeholder="e.g. Computer Science"
                   required
-                >
-                  <option value="">Select department...</option>
-                  {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-                  <option value="__other__">Other (specify below)</option>
-                </select>
+                />
+                <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6 }}>
+                  Type your department name exactly as it should appear.
+                </p>
               </div>
-              {form.department === '__other__' && (
-                <div>
-                  <label className="label">Specify Department *</label>
-                  <input
-                    className="input"
-                    value={form.customDepartment}
-                    onChange={e => setForm(f => ({ ...f, customDepartment: e.target.value }))}
-                    placeholder="e.g. Industrial Chemistry"
-                    required
-                  />
-                </div>
-              )}
               <div>
                 <label className="label">Number of Groups *</label>
                 <input
