@@ -1,6 +1,9 @@
 -- COS 102 Project Hub — Supabase Schema
 -- Run this in your Supabase SQL Editor
 
+-- ⚠️ If you already have the old schema, run this migration first:
+-- ALTER TABLE submissions ALTER COLUMN members TYPE JSONB USING members::jsonb;
+
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
