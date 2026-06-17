@@ -131,7 +131,7 @@ export default function RegisterDepartment() {
 
         <form onSubmit={handleSubmit} style={{ animation: 'fade-up 0.5s 0.2s ease both', opacity: 0 }}>
           <div className="card" style={{ marginBottom: 16 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 20, color: 'var(--violet-light)', fontFamily: 'Syne, sans-serif', textTransform: 'uppercase', letterSpacing: 1, fontSize: 11 }}>
+            <h3 style={{ fontWeight: 700, marginBottom: 20, color: 'var(--violet-light)', fontFamily: 'Syne, sans-serif', textTransform: 'uppercase', letterSpacing: 1, fontSize: 11 }}>
               Department Details
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
