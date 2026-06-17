@@ -33,16 +33,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer())
+    const arrayBuffer = await file.arrayBuffer()
     const fileName = file.name.toLowerCase()
     let members: { name: string; matric: string }[] = []
 
     if (fileName.endsWith('.csv')) {
-      const text = buffer.toString('utf-8')
+      const text = Buffer.from(arrayBuffer).toString('utf-8')
       members = parseCSV(text)
     } else if (fileName.endsWith('.pdf')) {
-      const pdfParse = (await import('pdf-parse')).default
-      const data = await pdfParse(buffer)
+      const uint8 = new Uint8Array(arrayBuffer)
+      const { PDFParse } = await import('pdf-parse')
+      const doc = new PDFParse(uint8)
+      const data = await doc.getText()
       members = parseText(data.text)
     } else {
       return NextResponse.json({ error: 'Unsupported file format. Please upload a CSV or PDF file.' }, { status: 400 })
