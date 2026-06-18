@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import jsPDF from 'jspdf'
-const autoTable = require('jspdf-autotable')
+import autoTable from 'jspdf-autotable'
 
 interface Member {
   name: string; matric: string;
@@ -39,6 +39,7 @@ export default function AdminPage() {
   const [expandedDept, setExpandedDept] = useState<string | null>(null)
   const [deptGroups, setDeptGroups] = useState<Record<string, GroupInfo[]>>({})
   const [loadingGroups, setLoadingGroups] = useState(false)
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table')
 
   const login = () => {
     if (pw === ADMIN_PASSWORD) { setAuthed(true); loadData() }
@@ -125,8 +126,8 @@ export default function AdminPage() {
     doc.text('Submissions Report', pageWidth / 2, pageHeight / 2 - 10, { align: 'center' })
     doc.setFontSize(11)
     doc.setTextColor(180, 180, 200)
-    doc.text('Generated: ' + new Date().toLocaleString(), pageWidth / 2, pageHeight / 2 + 25, { align: 'center' })
-    doc.text('Confidential — Lecturer/Admin Use Only', pageWidth / 2, pageHeight / 2 + 40, { align: 'center' })
+    doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, pageHeight / 2 + 25, { align: 'center' })
+    doc.text('Confidential \u2014 Lecturer/Admin Use Only', pageWidth / 2, pageHeight / 2 + 40, { align: 'center' })
 
     // -- Summary Section --
     doc.addPage()
@@ -146,12 +147,12 @@ export default function AdminPage() {
     const deptNames = Object.keys(grouped).sort()
 
     const summaryData = [
-      ['Total Departments', '' + departments.length],
-      ['Departments with Submissions', '' + deptNames.length],
-      ['Total Submissions', '' + submissions.length],
-      ['Total Students', '' + totalStudents],
-      ['Unique Projects', '' + uniqueProjects],
-      ['Avg Students per Submission', '' + (totalStudents / submissions.length).toFixed(1)],
+      ['Total Departments', `${departments.length}`],
+      ['Departments with Submissions', `${deptNames.length}`],
+      ['Total Submissions', `${submissions.length}`],
+      ['Total Students', `${totalStudents}`],
+      ['Unique Projects', `${uniqueProjects}`],
+      ['Avg Students per Submission', `${(totalStudents / submissions.length).toFixed(1)}`],
     ]
 
     autoTable(doc, {
@@ -175,11 +176,11 @@ export default function AdminPage() {
 
     let yPos = 35
 
-    deptNames.forEach((dept, idx) => {
+    deptNames.forEach((dept) => {
       const deptSubs = grouped[dept]
       const deptInfo = departments.find(d => d.department === dept)
 
-      if (yPos > 170 || idx > 0) {
+      if (yPos > 170) {
         doc.addPage()
         doc.setFillColor(30, 30, 40)
         doc.rect(0, 0, pageWidth, 20, 'F')
@@ -195,16 +196,17 @@ export default function AdminPage() {
       yPos += 6
       doc.setTextColor(100, 100, 120)
       doc.setFontSize(9)
-      const classRep = deptInfo ? 'Class Rep: ' + deptInfo.rep_name + ' (' + deptInfo.rep_email + ')' : ''
+      const classRep = deptInfo ? `Class Rep: ${deptInfo.rep_name} (${deptInfo.rep_email})` : ''
       doc.text(classRep, 14, yPos)
       yPos += 9
 
       const bodyRows = deptSubs.map(s => [
-        'Group ' + s.group_number,
+        `Group ${s.group_number}`,
         s.project_name,
         s.leader_name,
         s.leader_email,
-        s.members.map(m => m.name + ' (' + (m.matric || '\u2014') + ')').join(', '),
+        s.leader_phone || '\u2014',
+        s.members.map(m => `${m.name} (${m.matric || '\u2014'})`).join(', '),
         s.github_link,
         s.notes || '\u2014',
         new Date(s.submitted_at).toLocaleDateString(),
@@ -212,20 +214,21 @@ export default function AdminPage() {
 
       autoTable(doc, {
         startY: yPos,
-        head: [['Group', 'Project', 'Leader', 'Leader Email', 'Members (Name & Matric)', 'GitHub', 'Notes', 'Date']],
+        head: [['Group', 'Project', 'Leader', 'Email', 'Phone', 'Members (Name & Matric)', 'GitHub', 'Notes', 'Date']],
         body: bodyRows,
         theme: 'striped',
-        headStyles: { fillColor: [80, 50, 180], fontSize: 8 },
-        bodyStyles: { fontSize: 7 },
+        headStyles: { fillColor: [80, 50, 180], fontSize: 7 },
+        bodyStyles: { fontSize: 6.5 },
         columnStyles: {
-          0: { cellWidth: 20 },
-          1: { cellWidth: 35 },
-          2: { cellWidth: 25 },
-          3: { cellWidth: 35 },
-          4: { cellWidth: 50 },
-          5: { cellWidth: 40 },
-          6: { cellWidth: 25 },
-          7: { cellWidth: 20 },
+          0: { cellWidth: 16 },
+          1: { cellWidth: 32 },
+          2: { cellWidth: 22 },
+          3: { cellWidth: 30 },
+          4: { cellWidth: 18 },
+          5: { cellWidth: 48 },
+          6: { cellWidth: 36 },
+          7: { cellWidth: 22 },
+          8: { cellWidth: 16 },
         },
         margin: { left: 14, right: 14 },
       })
@@ -240,14 +243,14 @@ export default function AdminPage() {
       doc.setFontSize(8)
       doc.setTextColor(150, 150, 160)
       doc.text(
-        'COS-102 Project Hub Report \u2014 Page ' + i + ' of ' + pageCount,
+        `COS-102 Project Hub Report \u2014 Page ${i} of ${pageCount}`,
         pageWidth / 2,
         pageHeight - 10,
         { align: 'center' }
       )
     }
 
-    doc.save('COS102-Submissions-Report-' + Date.now() + '.pdf')
+    doc.save(`COS102-Submissions-Report-${Date.now()}.pdf`)
     toast.success('PDF exported!')
   }
 
@@ -265,7 +268,7 @@ export default function AdminPage() {
       <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
         <div style={{ width: '100%', maxWidth: 400, padding: 24 }}>
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>{'\uD83D\uDD10'}</div>
+            <div className="emoji-lg">{'\uD83D\uDD10'}</div>
             <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: -1, marginBottom: 8 }}>Admin Access</h1>
             <p style={{ color: 'var(--text-2)', fontSize: 14 }}>COS 102 Project Hub — Lecturer/Admin Only</p>
           </div>
@@ -312,7 +315,7 @@ export default function AdminPage() {
               {loading ? <span className="spinner" /> : '\u21BB'} Refresh
             </button>
             <button onClick={exportPDF} className="btn btn-cyan" style={{ fontSize: 12, padding: '6px 12px' }}>
-              ⬇ Export PDF Report
+              {'\u2B07'} Export PDF Report
             </button>
           </div>
         </div>
@@ -327,7 +330,7 @@ export default function AdminPage() {
             {tabs.map(t => (
               <div
                 key={t.id}
-                className={'sidebar-item ' + (tab === t.id ? 'active' : '')}
+                className={`sidebar-item ${tab === t.id ? 'active' : ''}`}
                 onClick={() => setTab(t.id)}
               >
                 <span>{t.icon}</span> {t.label}
@@ -359,7 +362,7 @@ export default function AdminPage() {
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                className={'btn ' + (tab === t.id ? 'btn-primary' : 'btn-secondary')}
+                className={`btn ${tab === t.id ? 'btn-primary' : 'btn-secondary'}`}
                 style={{ fontSize: 13, padding: '8px 16px', flexShrink: 0 }}
               >
                 {t.icon} {t.label}
@@ -410,11 +413,12 @@ export default function AdminPage() {
                 <table>
                   <thead>
                     <tr>
-                      <th>Department</th>
+                      <th>Dept</th>
                       <th>Group</th>
                       <th>Project</th>
                       <th>Leader</th>
-                      <th>Leader Email</th>
+                      <th>Email</th>
+                      <th>Phone</th>
                       <th>Members</th>
                       <th>Submitted</th>
                     </tr>
@@ -427,6 +431,7 @@ export default function AdminPage() {
                         <td style={{ color: 'var(--text)', fontWeight: 500 }}>{s.project_name}</td>
                         <td>{s.leader_name}</td>
                         <td><span className="mono" style={{ fontSize: 12 }}>{s.leader_email}</span></td>
+                        <td style={{ fontSize: 12 }}>{s.leader_phone || '\u2014'}</td>
                         <td><span className="badge badge-cyan">{s.members.length} members</span></td>
                         <td style={{ whiteSpace: 'nowrap', fontSize: 12, color: 'var(--text-3)' }}>
                           {new Date(s.submitted_at).toLocaleDateString()}
@@ -434,7 +439,7 @@ export default function AdminPage() {
                       </tr>
                     ))}
                     {submissions.length === 0 && (
-                      <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>No submissions yet</td></tr>
+                      <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>No submissions yet</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -486,7 +491,7 @@ export default function AdminPage() {
                           </td>
                         </tr>
                         {expandedDept === d.id && (
-                          <tr key={d.id + '-groups'}>
+                          <tr key={`${d.id}-groups`}>
                             <td colSpan={7} style={{ padding: '0 16px 16px 40px', background: 'rgba(100,60,210,0.03)' }}>
                               {loadingGroups && !deptGroups[d.id] ? (
                                 <p style={{ padding: 16, color: 'var(--text-3)', fontSize: 13 }}>
@@ -513,7 +518,7 @@ export default function AdminPage() {
                                           <td style={{ padding: '6px 8px' }}>{g.project_name}</td>
                                           <td style={{ padding: '6px 8px' }}>{g.leader_name}</td>
                                           <td style={{ padding: '6px 8px' }}>
-                                            <span className={'badge ' + (g.submitted ? 'badge-green' : 'badge-violet')}>
+                                            <span className={`badge ${g.submitted ? 'badge-green' : 'badge-violet'}`}>
                                               {g.submitted ? '\u2713 Submitted' : 'Pending'}
                                             </span>
                                           </td>
@@ -547,9 +552,25 @@ export default function AdminPage() {
                 <h2 style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.5 }}>
                   Submissions <span style={{ color: 'var(--text-3)', fontSize: 16, fontWeight: 400 }}>({filteredSubmissions.length})</span>
                 </h2>
-                <button onClick={exportPDF} className="btn btn-cyan" style={{ fontSize: 13 }}>
-                  ⬇ Export PDF Report
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => setViewMode('table')}
+                    className={`btn ${viewMode === 'table' ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ fontSize: 11, padding: '6px 12px' }}
+                  >
+                    {'\uD83D\uDCCB'} Table
+                  </button>
+                  <button
+                    onClick={() => setViewMode('cards')}
+                    className={`btn ${viewMode === 'cards' ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ fontSize: 11, padding: '6px 12px' }}
+                  >
+                    {'\uD83D\uDCC3'} Cards
+                  </button>
+                  <button onClick={exportPDF} className="btn btn-cyan" style={{ fontSize: 12 }}>
+                    {'\u2B07'} Export PDF
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
@@ -571,81 +592,145 @@ export default function AdminPage() {
                 </select>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {filteredSubmissions.map(s => (
-                  <div key={s.id} className="card" style={{ position: 'relative' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
-                      <div>
-                        <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-                          <span className="badge badge-violet">{s.department}</span>
-                          <span className="badge badge-cyan">Group {s.group_number}</span>
-                          <span className="badge badge-green">{'\u2713'} Submitted</span>
-                        </div>
-                        <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>{s.project_name}</h3>
-                        <p style={{ fontSize: 13, color: 'var(--text-3)' }}>
-                          Led by <strong style={{ color: 'var(--text-2)' }}>{s.leader_name}</strong>
-                          <span style={{ margin: '0 6px' }}>·</span>
-                          <span className="mono">{s.leader_email}</span>
-                        </p>
-                        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
-                          Phone: {s.leader_phone || '\u2014'}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => deleteSubmission(s.id)}
-                        className="btn btn-danger"
-                        style={{ fontSize: 11, padding: '5px 12px', flexShrink: 0 }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
-                      <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 1 }}>
-                        Members ({s.members.length})
-                      </p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                        {s.members.map((m: Member) => (
-                          <span key={m.name + m.matric} style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 6,
-                            background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.15)',
-                            padding: '3px 10px', borderRadius: 8, fontSize: 12,
-                          }}>
-                            <span style={{ color: 'var(--text)' }}>{m.name}</span>
-                            {m.matric && <span className="mono" style={{ fontSize: 10 }}>{m.matric}</span>}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <a
-                        href={s.github_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-secondary"
-                        style={{ fontSize: 12, padding: '6px 14px' }}
-                      >
-                        {'\uD83D\uDD17'} GitHub →
-                      </a>
-                      {s.notes && (
-                        <p style={{ fontSize: 12, color: 'var(--text-3)', fontStyle: 'italic' }}>
-                          Note: {s.notes}
-                        </p>
+              {viewMode === 'table' ? (
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Dept</th>
+                        <th>Group</th>
+                        <th>Project</th>
+                        <th>Leader</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Members (Name & Matric)</th>
+                        <th>GitHub</th>
+                        <th>Notes</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredSubmissions.map(s => (
+                        <tr key={s.id}>
+                          <td><span className="badge badge-violet" style={{ fontSize: 10 }}>{s.department}</span></td>
+                          <td>Group {s.group_number}</td>
+                          <td style={{ fontWeight: 500, fontSize: 12 }}>{s.project_name}</td>
+                          <td style={{ fontSize: 12 }}>{s.leader_name}</td>
+                          <td><span className="mono" style={{ fontSize: 11 }}>{s.leader_email}</span></td>
+                          <td style={{ fontSize: 11 }}>{s.leader_phone || '\u2014'}</td>
+                          <td style={{ fontSize: 11, maxWidth: 200 }}>
+                            {s.members.map((m, i) => (
+                              <span key={i} style={{ display: 'inline-block', marginRight: 4 }}>
+                                {m.name}{m.matric ? ` (${m.matric})` : ''}{i < s.members.length - 1 ? ';' : ''}
+                              </span>
+                            ))}
+                          </td>
+                          <td style={{ fontSize: 11, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <a href={s.github_link} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--cyan-light)' }}>
+                              {s.github_link.replace('https://github.com/', '')}
+                            </a>
+                          </td>
+                          <td style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--text-3)', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {s.notes || '\u2014'}
+                          </td>
+                          <td style={{ fontSize: 11, whiteSpace: 'nowrap', color: 'var(--text-3)' }}>
+                            {new Date(s.submitted_at).toLocaleDateString()}
+                          </td>
+                          <td>
+                            <button
+                              onClick={() => deleteSubmission(s.id)}
+                              className="btn btn-danger"
+                              style={{ fontSize: 10, padding: '3px 8px' }}
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {filteredSubmissions.length === 0 && (
+                        <tr><td colSpan={11} style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>No submissions match your search.</td></tr>
                       )}
-                      <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-3)' }}>
-                        {new Date(s.submitted_at).toLocaleString()}
-                      </span>
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {filteredSubmissions.map(s => (
+                    <div key={s.id} className="card" style={{ position: 'relative' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+                        <div>
+                          <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+                            <span className="badge badge-violet">{s.department}</span>
+                            <span className="badge badge-cyan">Group {s.group_number}</span>
+                            <span className="badge badge-green">{'\u2713'} Submitted</span>
+                          </div>
+                          <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>{s.project_name}</h3>
+                          <p style={{ fontSize: 13, color: 'var(--text-3)' }}>
+                            Led by <strong style={{ color: 'var(--text-2)' }}>{s.leader_name}</strong>
+                            <span style={{ margin: '0 6px' }}>·</span>
+                            <span className="mono">{s.leader_email}</span>
+                          </p>
+                          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                            Phone: {s.leader_phone || '\u2014'}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => deleteSubmission(s.id)}
+                          className="btn btn-danger"
+                          style={{ fontSize: 11, padding: '5px 12px', flexShrink: 0 }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 1 }}>
+                          Members ({s.members.length})
+                        </p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {s.members.map((m: Member) => (
+                            <span key={m.name + m.matric} style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 6,
+                              background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.15)',
+                              padding: '3px 10px', borderRadius: 8, fontSize: 12,
+                            }}>
+                              <span style={{ color: 'var(--text)' }}>{m.name}</span>
+                              {m.matric && <span className="mono" style={{ fontSize: 10 }}>{m.matric}</span>}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <a
+                          href={s.github_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-secondary"
+                          style={{ fontSize: 12, padding: '6px 14px' }}
+                        >
+                          {'\uD83D\uDD17'} GitHub →
+                        </a>
+                        {s.notes && (
+                          <p style={{ fontSize: 12, color: 'var(--text-3)', fontStyle: 'italic' }}>
+                            Note: {s.notes}
+                          </p>
+                        )}
+                        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-3)' }}>
+                          {new Date(s.submitted_at).toLocaleString()}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-                {filteredSubmissions.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-3)' }}>
-                    <p style={{ fontSize: 32, marginBottom: 12 }}>{'\uD83D\uDCED'}</p>
-                    <p>No submissions match your search.</p>
-                  </div>
-                )}
-              </div>
+                  ))}
+                  {filteredSubmissions.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-3)' }}>
+                      <p style={{ fontSize: 32, marginBottom: 12 }}>{'\uD83D\uDCED'}</p>
+                      <p>No submissions match your search.</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </main>
