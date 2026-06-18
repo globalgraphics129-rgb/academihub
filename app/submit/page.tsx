@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import { parseMemberEntry } from '@/lib/matric'
 
 interface Department { id: string; department: string; number_of_groups: number }
 interface Group { id: string; group_number: number; leader_name: string; project_name: string; submitted: boolean }
@@ -41,9 +42,15 @@ export default function SubmitProject() {
   }, [selectedDept])
 
   const addMember = () => {
-    const name = memberName.trim()
-    const matric = memberMatric.trim()
-    if (!name) { toast.error('Enter a member name'); return }
+    const raw = memberName.trim()
+    if (!raw) { toast.error('Enter a member name'); return }
+    let name = raw
+    let matric = memberMatric.trim()
+    if (!matric) {
+      const parsed = parseMemberEntry(raw)
+      name = parsed.name
+      matric = parsed.matric
+    }
     if (members.some(m => m.name.toLowerCase() === name.toLowerCase() && m.matric === matric)) {
       toast.error('Member already added'); return
     }
@@ -55,12 +62,23 @@ export default function SubmitProject() {
 
   const removeMember = (name: string) => setMembers(prev => prev.filter(m => m.name !== name))
 
+  const onNameChange = (val: string) => {
+    setMemberName(val)
+    if (!memberMatric) {
+      const parsed = parseMemberEntry(val)
+      if (parsed.matric) {
+        setMemberName(parsed.name)
+        setMemberMatric(parsed.matric)
+      }
+    }
+  }
+
   const parseBulk = () => {
     const lines = bulkText.split('\n').map(l => l.trim()).filter(Boolean)
     const parsed: Member[] = []
     for (const line of lines) {
-      const parts = line.split(/[,|\t]+/).map(p => p.trim())
-      if (parts[0]) parsed.push({ name: parts[0], matric: parts[1] || '' })
+      const result = parseMemberEntry(line)
+      if (result.name) parsed.push(result)
     }
     if (parsed.length === 0) { toast.error('No valid entries found'); return }
     const existing = new Set(members.map(m => m.name + '|' + m.matric))
@@ -307,7 +325,7 @@ export default function SubmitProject() {
                     ref={nameRef}
                     className="input"
                     value={memberName}
-                    onChange={e => setMemberName(e.target.value)}
+                    onChange={e => onNameChange(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addMember() } }}
                     placeholder="Full name..."
                     style={{ flex: 1 }}

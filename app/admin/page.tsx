@@ -4,6 +4,7 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { parseMatric, parseMemberEntry, fmtMembers } from '@/lib/matric'
 
 interface Member {
   name: string; matric: string;
@@ -25,19 +26,7 @@ interface Submission {
 
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'cos102admin'
 
-const fmtMembers = (members: any[]): string => {
-  return members.map(m => {
-    if (typeof m === 'string') return m
-    return `${m.name || ''}${m.matric ? ` (${m.matric})` : ''}`
-  }).filter(Boolean).join(', ')
-}
 
-const fmtMemberChips = (members: any[], render: (name: string, matric: string) => JSX.Element) => {
-  return members.map((m, i) => {
-    if (typeof m === 'string') return render(m, '')
-    return render(m.name || '', m.matric || '')
-  })
-}
 
 type Tab = 'overview' | 'departments' | 'submissions'
 
@@ -222,24 +211,22 @@ export default function AdminPage() {
       tableLineWidth: 0.5,
     })
 
-    // ==================== STUDENT ROSTER BY DEPARTMENT ====================
+    // ==================== FULL HIERARCHICAL REPORT ====================
     doc.addPage()
     doc.setFillColor(PURPLE_DARK[0], PURPLE_DARK[1], PURPLE_DARK[2])
     doc.rect(0, 0, pw, 28, 'F')
     doc.setTextColor(255, 255, 255)
     doc.setFontSize(18)
-    doc.text('Student Roster by Department', 16, 19)
+    doc.text('Full Departmental Report', 16, 19)
 
     let yPos = 36
-    let globalCounter = 0
 
     deptNames.forEach((dept) => {
       const deptSubs = grouped[dept]
       const deptInfo = departments.find(d => d.department === dept)
 
-      // Check if we need a new page (leave room for header + table)
-      if (yPos > ph - 60) {
-        // Page footer
+      // Check page break
+      if (yPos > ph - 80) {
         doc.setFontSize(8)
         doc.setTextColor(TEXT_MUTED[0], TEXT_MUTED[1], TEXT_MUTED[2])
         doc.text(`COS-102 Project Hub Report \u2014 Page ${(doc as any).getNumberOfPages()}`, pw / 2, ph - 10, { align: 'center' })
@@ -247,72 +234,102 @@ export default function AdminPage() {
         yPos = 16
       }
 
-      // Department section header
+      // Department header bar
       doc.setFillColor(PURPLE_MID[0], PURPLE_MID[1], PURPLE_MID[2])
-      doc.roundedRect(12, yPos, pw - 24, 14, 3, 3, 'F')
+      doc.roundedRect(12, yPos, pw - 24, 12, 3, 3, 'F')
       doc.setTextColor(255, 255, 255)
-      doc.setFontSize(14)
-      doc.text(dept, 20, yPos + 10)
-      yPos += 22
+      doc.setFontSize(13)
+      doc.text(dept, 18, yPos + 8)
+      yPos += 18
 
       if (deptInfo) {
         doc.setTextColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2])
-        doc.setFontSize(10)
-        doc.text(`Class Rep: ${deptInfo.rep_name}  |  ${deptInfo.rep_email}  |  ${deptInfo.rep_phone || '\u2014'}`, 20, yPos)
+        doc.setFontSize(9)
+        doc.text(`Class Rep: ${deptInfo.rep_name}  |  ${deptInfo.rep_email}  |  ${deptInfo.rep_phone || '\u2014'}`, 18, yPos)
         yPos += 10
       }
 
-      // Build expanded student rows for this department
-      const studentRows: any[][] = []
-      deptSubs.forEach((s) => {
-        const members = Array.isArray(s.members) ? s.members : []
-        members.forEach((m: any) => {
-          globalCounter++
-          const name = typeof m === 'string' ? m : (m.name || '')
-          const matric = typeof m === 'string' ? '' : (m.matric || '')
-          studentRows.push([
-            globalCounter,
-            name,
-            matric,
-            `Group ${s.group_number}`,
-            s.project_name,
-            s.leader_name,
-            s.github_link,
-            new Date(s.submitted_at).toLocaleDateString(),
-          ])
-        })
-      })
+      // Sort submissions by group number
+      const sortedSubs = [...deptSubs].sort((a, b) => a.group_number - b.group_number)
 
-      if (studentRows.length > 0) {
-        autoTable(doc, {
-          startY: yPos,
-          head: [['#', 'Student Name', 'Matric No.', 'Group', 'Project Title', 'Leader', 'GitHub Link', 'Submitted']],
-          body: studentRows,
-          theme: 'striped',
-          headStyles: { fillColor: PURPLE_DARK, fontSize: 10, halign: 'center' },
-          bodyStyles: { fontSize: 9 },
-          columnStyles: {
-            0: { cellWidth: 12, halign: 'center' },
-            1: { cellWidth: 48 },
-            2: { cellWidth: 32, halign: 'center' },
-            3: { cellWidth: 20, halign: 'center' },
-            4: { cellWidth: 58 },
-            5: { cellWidth: 32 },
-            6: { cellWidth: 52 },
-            7: { cellWidth: 22, halign: 'center' },
-          },
-          margin: { left: 16, right: 16 },
-          alternateRowStyles: { fillColor: [248, 245, 255] },
-          tableLineColor: [200, 190, 220],
-          tableLineWidth: 0.3,
-        })
-        yPos = (doc as any).lastAutoTable.finalY + 16
-      } else {
+      sortedSubs.forEach((s) => {
+        if (yPos > ph - 90) {
+          doc.setFontSize(8)
+          doc.setTextColor(TEXT_MUTED[0], TEXT_MUTED[1], TEXT_MUTED[2])
+          doc.text(`COS-102 Project Hub Report \u2014 Page ${(doc as any).getNumberOfPages()}`, pw / 2, ph - 10, { align: 'center' })
+          doc.addPage()
+          yPos = 16
+        }
+
+        // Group header
+        doc.setFillColor(PURPLE_LIGHT[0], PURPLE_LIGHT[1], PURPLE_LIGHT[2])
+        doc.roundedRect(18, yPos, pw - 36, 10, 2, 2, 'F')
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(11)
+        doc.text(`Group ${s.group_number} \u2014 ${s.project_name}`, 24, yPos + 7)
+        yPos += 15
+
+        // Leader and project details
+        doc.setTextColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2])
+        doc.setFontSize(9)
+        doc.text(`Leader: ${s.leader_name}  |  ${s.leader_email}  |  ${s.leader_phone || '\u2014'}`, 24, yPos)
+        yPos += 5
+        doc.setFontSize(8)
+        doc.setTextColor(80, 80, 100)
+        doc.text(`GitHub: ${s.github_link}`, 24, yPos)
+        yPos += 4
+        if (s.notes) {
+          doc.text(`Notes: ${s.notes}`, 24, yPos)
+          yPos += 4
+        }
         doc.setTextColor(TEXT_MUTED[0], TEXT_MUTED[1], TEXT_MUTED[2])
-        doc.setFontSize(10)
-        doc.text('No student data available for this department.', 20, yPos + 8)
-        yPos += 16
-      }
+        doc.text(`Submitted: ${new Date(s.submitted_at).toLocaleString()}`, 24, yPos)
+        yPos += 7
+
+        // Members table
+        const members = Array.isArray(s.members) ? s.members : []
+        if (members.length > 0) {
+          const memberRows: any[][] = []
+          members.forEach((m: any, mi: number) => {
+            let n: string, mat: string
+            if (typeof m === 'string') {
+              const parsed = parseMatric(m)
+              n = parsed.name; mat = parsed.matric
+            } else {
+              n = m.name || ''; mat = m.matric || ''
+              if (!mat && n) {
+                const parsed = parseMatric(n)
+                n = parsed.name; mat = parsed.matric
+              }
+            }
+            memberRows.push([mi + 1, n, mat || '\u2014'])
+          })
+
+          autoTable(doc, {
+            startY: yPos,
+            head: [['#', 'Student Name', 'Matric No.']],
+            body: memberRows,
+            theme: 'striped',
+            headStyles: { fillColor: PURPLE_DARK, fontSize: 9 },
+            bodyStyles: { fontSize: 8 },
+            columnStyles: {
+              0: { cellWidth: 12, halign: 'center' },
+              1: { cellWidth: 100 },
+              2: { cellWidth: 50, halign: 'center' },
+            },
+            margin: { left: 24, right: 16 },
+            alternateRowStyles: { fillColor: [248, 245, 255] },
+            tableLineColor: [200, 190, 220],
+            tableLineWidth: 0.2,
+          })
+          yPos = (doc as any).lastAutoTable.finalY + 12
+        } else {
+          doc.setTextColor(TEXT_MUTED[0], TEXT_MUTED[1], TEXT_MUTED[2])
+          doc.setFontSize(9)
+          doc.text('No members listed for this group.', 24, yPos + 4)
+          yPos += 14
+        }
+      })
     })
 
     // ==================== PAGE FOOTER (all pages) ====================
@@ -532,95 +549,155 @@ export default function AdminPage() {
                 <h2 style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.5 }}>Departments</h2>
                 <Link href="/register-department" className="btn btn-primary" style={{ fontSize: 13 }}>+ Add Department</Link>
               </div>
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Department</th>
-                      <th>Class Rep</th>
-                      <th>Rep Email</th>
-                      <th>Rep Phone</th>
-                      <th>Groups</th>
-                      <th>Registered</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {departments.map(d => (
-                      <>
-                        <tr key={d.id} style={{ cursor: 'pointer' }} onClick={() => toggleDeptExpand(d.id)}>
-                          <td style={{ color: 'var(--text)', fontWeight: 500 }}>
-                            {expandedDept === d.id ? '\u25BC' : '\u25B6'} {d.department}
-                          </td>
-                          <td>{d.rep_name}</td>
-                          <td><span className="mono">{d.rep_email}</span></td>
-                          <td style={{ fontSize: 12 }}>{d.rep_phone || '\u2014'}</td>
-                          <td><span className="badge badge-violet">{d.number_of_groups} groups</span></td>
-                          <td style={{ fontSize: 12, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {departments.map(d => {
+                  const isExpanded = expandedDept === d.id
+                  const deptSubs = submissions.filter(s => s.department === d.department)
+                  return (
+                    <div key={d.id} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                      {/* Department Header */}
+                      <div
+                        style={{
+                          padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                          justifyContent: 'space-between', flexWrap: 'wrap', gap: 12,
+                          background: isExpanded ? 'rgba(100,60,210,0.06)' : 'transparent',
+                          borderBottom: isExpanded ? '1px solid var(--border)' : 'none',
+                        }}
+                        onClick={() => toggleDeptExpand(d.id)}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <span style={{ fontSize: 16, color: 'var(--violet)' }}>{isExpanded ? '\u25BC' : '\u25B6'}</span>
+                          <div>
+                            <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--violet-light)' }}>{d.department}</span>
+                            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                              Rep: {d.rep_name} &middot; {d.rep_email} &middot; {d.rep_phone || '\u2014'}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <span className="badge badge-violet">{d.number_of_groups} groups</span>
+                          <span className="badge badge-cyan">{deptSubs.length} submitted</span>
+                          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
                             {new Date(d.created_at).toLocaleDateString()}
-                          </td>
-                          <td>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); deleteDepartment(d.id) }}
-                              className="btn btn-danger"
-                              style={{ fontSize: 11, padding: '4px 10px' }}
-                            >
-                              Delete
-                            </button>
-                          </td>
-                        </tr>
-                        {expandedDept === d.id && (
-                          <tr key={`${d.id}-groups`}>
-                            <td colSpan={7} style={{ padding: '0 16px 16px 40px', background: 'rgba(100,60,210,0.03)' }}>
-                              {loadingGroups && !deptGroups[d.id] ? (
-                                <p style={{ padding: 16, color: 'var(--text-3)', fontSize: 13 }}>
-                                  <span className="spinner" /> Loading groups...
-                                </p>
-                              ) : (deptGroups[d.id]?.length || 0) > 0 ? (
-                                <div style={{ marginTop: 12 }}>
-                                  <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
-                                    Registered Groups
-                                  </p>
-                                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                                    <thead>
-                                      <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                                        <th style={{ textAlign: 'left', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 600, fontSize: 11 }}>Group</th>
-                                        <th style={{ textAlign: 'left', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 600, fontSize: 11 }}>Project</th>
-                                        <th style={{ textAlign: 'left', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 600, fontSize: 11 }}>Leader</th>
-                                        <th style={{ textAlign: 'left', padding: '6px 8px', color: 'var(--text-3)', fontWeight: 600, fontSize: 11 }}>Status</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {deptGroups[d.id]!.map(g => (
-                                        <tr key={g.id} style={{ borderBottom: '1px solid rgba(100,60,210,0.06)' }}>
-                                          <td style={{ padding: '6px 8px', fontWeight: 500 }}>Group {g.group_number}</td>
-                                          <td style={{ padding: '6px 8px' }}>{g.project_name}</td>
-                                          <td style={{ padding: '6px 8px' }}>{g.leader_name}</td>
-                                          <td style={{ padding: '6px 8px' }}>
-                                            <span className={`badge ${g.submitted ? 'badge-green' : 'badge-violet'}`}>
-                                              {g.submitted ? '\u2713 Submitted' : 'Pending'}
-                                            </span>
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
+                          </span>
+                          <button onClick={(e) => { e.stopPropagation(); deleteDepartment(d.id) }}
+                            className="btn btn-danger" style={{ fontSize: 10, padding: '3px 8px' }}>Delete</button>
+                        </div>
+                      </div>
+
+                      {/* Expanded Content */}
+                      {isExpanded && (
+                        <div style={{ padding: '16px 20px 20px 40px' }}>
+                          {(deptGroups[d.id]?.length || 0) === 0 && loadingGroups && (
+                            <p style={{ color: 'var(--text-3)', fontSize: 13 }}><span className="spinner" /> Loading groups...</p>
+                          )}
+                          {!loadingGroups && (!deptGroups[d.id] || deptGroups[d.id]!.length === 0) && (
+                            <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-3)' }}>
+                              <p style={{ fontSize: 28, marginBottom: 8 }}>{'\uD83D\uDCCB'}</p>
+                              <p>No groups registered yet for this department.</p>
+                            </div>
+                          )}
+
+                          {/* Groups */}
+                          {deptGroups[d.id]?.map(g => {
+                            const submission = submissions.find(s => s.group_number === g.group_number && s.department === d.department)
+                            return (
+                              <div key={g.id} style={{
+                                marginBottom: 16, border: '1px solid rgba(100,60,210,0.12)',
+                                borderRadius: 10, overflow: 'hidden',
+                              }}>
+                                {/* Group Header */}
+                                <div style={{
+                                  padding: '10px 14px', background: 'rgba(100,60,210,0.05)',
+                                  borderBottom: '1px solid rgba(100,60,210,0.1)',
+                                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8,
+                                }}>
+                                  <div>
+                                    <span style={{ fontWeight: 700, fontSize: 14 }}>Group {g.group_number}</span>
+                                    <span style={{ margin: '0 10px', color: 'var(--text-3)' }}>&middot;</span>
+                                    <span style={{ fontSize: 13 }}>{g.project_name}</span>
+                                  </div>
+                                  <span className={`badge ${g.submitted ? 'badge-green' : 'badge-violet'}`}>
+                                    {g.submitted ? '\u2713 Submitted' : 'Pending'}
+                                  </span>
                                 </div>
-                              ) : (
-                                <p style={{ padding: 16, color: 'var(--text-3)', fontSize: 13 }}>
-                                  No groups registered yet
-                                </p>
-                              )}
-                            </td>
-                          </tr>
-                        )}
-                      </>
-                    ))}
-                    {departments.length === 0 && (
-                      <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>No departments registered yet</td></tr>
-                    )}
-                  </tbody>
-                </table>
+
+                                {/* Group Leader */}
+                                <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+                                  <strong>Leader:</strong> {g.leader_name}
+                                  <span style={{ margin: '0 8px', color: 'var(--text-3)' }}>&middot;</span>
+                                  <span className="mono">{g.leader_email}</span>
+                                  {g.leader_phone && <span style={{ marginLeft: 8 }}>&middot; {g.leader_phone}</span>}
+                                </div>
+
+                                {/* Submitted Project Details */}
+                                {submission && (
+                                  <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--border)', fontSize: 13, background: 'rgba(6,182,212,0.03)' }}>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+                                      <span><strong>GitHub:</strong> <a href={submission.github_link} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--cyan-light)' }}>{submission.github_link.replace('https://github.com/', '')}</a></span>
+                                      {submission.notes && <span><strong>Notes:</strong> {submission.notes}</span>}
+                                      <span style={{ color: 'var(--text-3)', marginLeft: 'auto' }}>
+                                        Submitted: {new Date(submission.submitted_at).toLocaleString()}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Members */}
+                                <div style={{ padding: '10px 14px', fontSize: 13 }}>
+                                  <div style={{ fontWeight: 600, color: 'var(--cyan)', marginBottom: 6, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
+                                    Members ({submission ? submission.members.length : 0})
+                                  </div>
+                                  {submission && submission.members.length > 0 ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                      {submission.members.map((m: any, mi: number) => {
+                                        let n: string, mat: string
+                                        if (typeof m === 'string') {
+                                          const parsed = parseMatric(m)
+                                          n = parsed.name; mat = parsed.matric
+                                        } else {
+                                          n = m.name || ''; mat = m.matric || ''
+                                          if (!mat && n) {
+                                            const parsed = parseMatric(n)
+                                            n = parsed.name; mat = parsed.matric
+                                          }
+                                        }
+                                        return (
+                                          <div key={mi} style={{ display: 'flex', gap: 8, padding: '2px 0' }}>
+                                            <span style={{ color: 'var(--text-3)', width: 24, textAlign: 'right' }}>{mi + 1}.</span>
+                                            <span style={{ flex: 1 }}>{n}</span>
+                                            {mat && <span className="mono" style={{ color: 'var(--violet-light)', fontSize: 12 }}>{mat}</span>}
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                  ) : (
+                                    <p style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>No members listed yet</p>
+                                  )}
+                                </div>
+
+                                {/* Delete button for submission */}
+                                {submission && (
+                                  <div style={{ padding: '6px 14px', borderTop: '1px solid var(--border)', textAlign: 'right' }}>
+                                    <button onClick={() => deleteSubmission(submission.id)}
+                                      className="btn btn-danger" style={{ fontSize: 10, padding: '3px 8px' }}>Delete Submission</button>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+                {departments.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-3)' }}>
+                    <p style={{ fontSize: 32, marginBottom: 12 }}>{'\uD83C\uDFDB\uFE0F'}</p>
+                    <p>No departments registered yet.</p>
+                    <Link href="/register-department" className="btn btn-primary" style={{ marginTop: 16, display: 'inline-block' }}>Add Department</Link>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -759,27 +836,36 @@ export default function AdminPage() {
                         </button>
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
-                        <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 1 }}>
-                          Members ({s.members.length})
-                        </p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                          {s.members.map((m, idx) => {
-                            const n = typeof m === 'string' ? m : (m.name || '')
-                            const mat = typeof m === 'string' ? '' : (m.matric || '')
-                            return (
-                              <span key={n + mat || idx} style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 6,
-                                background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.15)',
-                                padding: '3px 10px', borderRadius: 8, fontSize: 12,
-                              }}>
-                                <span style={{ color: 'var(--text)' }}>{n}</span>
-                                {mat && <span className="mono" style={{ fontSize: 10 }}>{mat}</span>}
-                              </span>
-                            )
-                          })}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
+                          <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 1 }}>
+                            Members ({s.members.length})
+                          </p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            {s.members.map((m, idx) => {
+                              let n: string, mat: string
+                              if (typeof m === 'string') {
+                                const parsed = parseMatric(m)
+                                n = parsed.name; mat = parsed.matric
+                              } else {
+                                n = m.name || ''; mat = m.matric || ''
+                                if (!mat && n) {
+                                  const parsed = parseMatric(n)
+                                  n = parsed.name; mat = parsed.matric
+                                }
+                              }
+                              return (
+                                <span key={n + mat || idx} style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                                  background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.15)',
+                                  padding: '3px 10px', borderRadius: 8, fontSize: 12,
+                                }}>
+                                  <span style={{ color: 'var(--text)' }}>{n}</span>
+                                  {mat && <span className="mono" style={{ fontSize: 10 }}>{mat}</span>}
+                                </span>
+                              )
+                            })}
+                          </div>
                         </div>
-                      </div>
 
                       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                         <a
