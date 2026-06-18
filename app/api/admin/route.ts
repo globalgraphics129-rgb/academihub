@@ -45,6 +45,22 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: true })
   }
 
+  if (type === 'department') {
+    const body = await req.json()
+    const { active } = body
+    if (active === undefined) {
+      return NextResponse.json({ error: 'active field required' }, { status: 400 })
+    }
+    const { data, error } = await supabaseAdmin
+      .from('departments')
+      .update({ active })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ department: data })
+  }
+
   return NextResponse.json({ error: 'Unknown type' }, { status: 400 })
 }
 

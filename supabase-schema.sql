@@ -15,6 +15,7 @@ CREATE TABLE departments (
   rep_email TEXT NOT NULL,
   rep_phone TEXT,
   number_of_groups INTEGER NOT NULL DEFAULT 1,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -60,6 +61,9 @@ CREATE POLICY "Public read submissions" ON submissions FOR SELECT USING (true);
 
 -- Only service role can insert/update/delete (handled via API routes)
 -- (Service role bypasses RLS by default)
+
+-- Migration: Add active column if upgrading from old schema
+-- ALTER TABLE departments ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
 
 -- Indexes for performance
 CREATE INDEX idx_groups_dept ON groups(department_id);

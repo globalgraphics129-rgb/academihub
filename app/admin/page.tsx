@@ -11,7 +11,7 @@ interface Member {
 }
 interface Department {
   id: string; department: string; number_of_groups: number;
-  rep_name: string; rep_email: string; rep_phone: string; created_at: string;
+  rep_name: string; rep_email: string; rep_phone: string; created_at: string; active: boolean;
 }
 interface GroupInfo {
   id: string; group_number: number; leader_name: string; leader_email: string;
@@ -213,6 +213,25 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
       setEmailDept(null)
     } catch { toast.error('Failed to send email') }
     finally { setSendingEmail(false) }
+  }
+
+  const toggleActive = async (d: Department) => {
+    const newActive = !d.active
+    try {
+      const res = await fetch(`/api/admin?type=department&id=${d.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: newActive }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        toast.error(err.error || 'Failed to toggle')
+        return
+      }
+      const data = await res.json()
+      setDepartments(prev => prev.map(dept => dept.id === d.id ? data.department : dept))
+      toast.success(newActive ? 'Department enabled' : 'Department disabled')
+    } catch { toast.error('Failed to toggle') }
   }
 
   const startEdit = (s: Submission) => {
@@ -929,6 +948,16 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
                           <span style={{ fontSize: 16, color: 'var(--violet)' }}>{isExpanded ? '\u25BC' : '\u25B6'}</span>
                           <div>
                             <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--violet-light)' }}>{d.department}</span>
+                            {' '}
+                            <span style={{
+                              display: 'inline-block', fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
+                              padding: '2px 8px', borderRadius: 10, verticalAlign: 'middle',
+                              background: d.active ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+                              color: d.active ? '#4ade80' : '#f87171',
+                              border: `1px solid ${d.active ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                            }}>
+                              {d.active ? 'Active' : 'Disabled'}
+                            </span>
                             <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
                               Rep: {d.rep_name} &middot; {d.rep_email} &middot; {d.rep_phone || '\u2014'}
                             </div>
@@ -942,6 +971,13 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
                           </span>
                           <button onClick={(e) => { e.stopPropagation(); openEditModal(d) }}
                             className="btn btn-secondary" style={{ fontSize: 10, padding: '3px 8px' }}>Edit</button>
+                          <button onClick={(e) => { e.stopPropagation(); toggleActive(d) }}
+                            style={{
+                              fontSize: 10, padding: '3px 8px', cursor: 'pointer', borderRadius: 6,
+                              fontWeight: 600, border: 'none', transition: 'opacity 0.15s',
+                              background: d.active ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)',
+                              color: d.active ? '#f87171' : '#4ade80',
+                            }}>{d.active ? 'Disable' : 'Enable'}</button>
                           <button onClick={(e) => { e.stopPropagation(); openEmailModal(d) }}
                             className="btn btn-cyan" style={{ fontSize: 10, padding: '3px 8px' }}>Send Email</button>
                           <button onClick={(e) => { e.stopPropagation(); deleteDepartment(d.id) }}

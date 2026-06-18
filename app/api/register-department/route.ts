@@ -6,6 +6,7 @@ export async function GET() {
   const { data, error } = await supabaseAdmin
     .from('departments')
     .select('*')
+    .eq('active', true)
     .order('department', { ascending: true })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
