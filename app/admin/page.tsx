@@ -25,6 +25,20 @@ interface Submission {
 
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'cos102admin'
 
+const fmtMembers = (members: any[]): string => {
+  return members.map(m => {
+    if (typeof m === 'string') return m
+    return `${m.name || ''}${m.matric ? ` (${m.matric})` : ''}`
+  }).filter(Boolean).join(', ')
+}
+
+const fmtMemberChips = (members: any[], render: (name: string, matric: string) => JSX.Element) => {
+  return members.map((m, i) => {
+    if (typeof m === 'string') return render(m, '')
+    return render(m.name || '', m.matric || '')
+  })
+}
+
 type Tab = 'overview' | 'departments' | 'submissions'
 
 export default function AdminPage() {
@@ -206,7 +220,7 @@ export default function AdminPage() {
         s.leader_name,
         s.leader_email,
         s.leader_phone || '\u2014',
-        s.members.map(m => `${m.name} (${m.matric || '\u2014'})`).join(', '),
+        fmtMembers(s.members),
         s.github_link,
         s.notes || '\u2014',
         new Date(s.submitted_at).toLocaleDateString(),
@@ -619,19 +633,15 @@ export default function AdminPage() {
                           <td style={{ fontSize: 12 }}>{s.leader_name}</td>
                           <td><span className="mono" style={{ fontSize: 11 }}>{s.leader_email}</span></td>
                           <td style={{ fontSize: 11 }}>{s.leader_phone || '\u2014'}</td>
-                          <td style={{ fontSize: 11, maxWidth: 200 }}>
-                            {s.members.map((m, i) => (
-                              <span key={i} style={{ display: 'inline-block', marginRight: 4 }}>
-                                {m.name}{m.matric ? ` (${m.matric})` : ''}{i < s.members.length - 1 ? ';' : ''}
-                              </span>
-                            ))}
+                          <td style={{ fontSize: 11 }}>
+                            {fmtMembers(s.members)}
                           </td>
-                          <td style={{ fontSize: 11, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <td style={{ fontSize: 11 }}>
                             <a href={s.github_link} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--cyan-light)' }}>
                               {s.github_link.replace('https://github.com/', '')}
                             </a>
                           </td>
-                          <td style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--text-3)', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <td style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--text-3)' }}>
                             {s.notes || '\u2014'}
                           </td>
                           <td style={{ fontSize: 11, whiteSpace: 'nowrap', color: 'var(--text-3)' }}>
@@ -689,16 +699,20 @@ export default function AdminPage() {
                           Members ({s.members.length})
                         </p>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                          {s.members.map((m: Member) => (
-                            <span key={m.name + m.matric} style={{
-                              display: 'inline-flex', alignItems: 'center', gap: 6,
-                              background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.15)',
-                              padding: '3px 10px', borderRadius: 8, fontSize: 12,
-                            }}>
-                              <span style={{ color: 'var(--text)' }}>{m.name}</span>
-                              {m.matric && <span className="mono" style={{ fontSize: 10 }}>{m.matric}</span>}
-                            </span>
-                          ))}
+                          {s.members.map((m, idx) => {
+                            const n = typeof m === 'string' ? m : (m.name || '')
+                            const mat = typeof m === 'string' ? '' : (m.matric || '')
+                            return (
+                              <span key={n + mat || idx} style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 6,
+                                background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.15)',
+                                padding: '3px 10px', borderRadius: 8, fontSize: 12,
+                              }}>
+                                <span style={{ color: 'var(--text)' }}>{n}</span>
+                                {mat && <span className="mono" style={{ fontSize: 10 }}>{mat}</span>}
+                              </span>
+                            )
+                          })}
                         </div>
                       </div>
 
