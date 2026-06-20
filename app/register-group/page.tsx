@@ -10,6 +10,7 @@ interface Department {
 }
 
 export default function RegisterGroup() {
+  const [portalClosed, setPortalClosed] = useState(false)
   const [departments, setDepartments] = useState<Department[]>([])
   const [form, setForm] = useState({
     departmentId: '',
@@ -24,6 +25,14 @@ export default function RegisterGroup() {
   const [done, setDone] = useState(false)
 
   useEffect(() => {
+    fetch('/api/portal-settings')
+      .then(r => r.json())
+      .then(data => {
+        if (data.closes_at && new Date(data.closes_at).getTime() < Date.now()) {
+          setPortalClosed(true)
+        }
+      })
+      .catch(() => {})
     fetch('/api/register-department')
       .then(r => r.json())
       .then(data => { setDepartments(data.departments || []); setFetching(false) })
@@ -83,6 +92,21 @@ export default function RegisterGroup() {
             <Link href="/submit" className="btn btn-primary">Next: Submit Project →</Link>
             <Link href="/" className="btn btn-secondary">Back Home</Link>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (portalClosed) {
+    return (
+      <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <div style={{ textAlign: 'center', maxWidth: 400, padding: 24 }}>
+          <p style={{ fontSize: 48, marginBottom: 16 }}>{'\uD83D\uDD12'}</p>
+          <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: -1, marginBottom: 12 }}>Portal Closed</h1>
+          <p style={{ color: 'var(--text-2)', fontSize: 15, lineHeight: 1.7, marginBottom: 24 }}>
+            The submission portal has been closed. Group registration is no longer available.
+          </p>
+          <Link href="/" className="btn btn-secondary" style={{ display: 'inline-block' }}>← Back Home</Link>
         </div>
       </div>
     )

@@ -65,6 +65,19 @@ CREATE POLICY "Public read submissions" ON submissions FOR SELECT USING (true);
 -- Migration: Add active column if upgrading from old schema
 -- ALTER TABLE departments ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
 
+-- Portal settings (single-row table for portal timer)
+CREATE TABLE portal_settings (
+  id INTEGER PRIMARY KEY DEFAULT 1,
+  closes_at TIMESTAMPTZ,
+  closing_soon_notified BOOLEAN NOT NULL DEFAULT FALSE,
+  closed_notified BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT single_row CHECK (id = 1)
+);
+
+-- Insert default row
+INSERT INTO portal_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+
 -- Indexes for performance
 CREATE INDEX idx_groups_dept ON groups(department_id);
 CREATE INDEX idx_submissions_dept ON submissions(department);

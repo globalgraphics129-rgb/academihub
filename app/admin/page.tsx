@@ -35,7 +35,7 @@ interface StudentEntry {
 
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'cos102admin'
 
-type Tab = 'overview' | 'departments' | 'submissions' | 'students'
+type Tab = 'overview' | 'departments' | 'submissions' | 'students' | 'settings'
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false)
@@ -74,6 +74,11 @@ export default function AdminPage() {
   const [deleteGroupTarget, setDeleteGroupTarget] = useState<GroupInfo | null>(null)
   const [showDeleteGroupConfirm, setShowDeleteGroupConfirm] = useState(false)
   const [deletingGroup, setDeletingGroup] = useState(false)
+  const [timerClosesAt, setTimerClosesAt] = useState('')
+  const [timerDate, setTimerDate] = useState('')
+  const [timerTime, setTimerTime] = useState('')
+  const [savingTimer, setSavingTimer] = useState(false)
+  const [existingTimer, setExistingTimer] = useState<string | null>(null)
 
   const login = () => {
     if (pw === ADMIN_PASSWORD) { setAuthed(true); loadData() }
@@ -91,6 +96,7 @@ export default function AdminPage() {
       const sData = await sRes.json()
       setDepartments(dData.departments || [])
       setSubmissions(sData.submissions || [])
+      loadTimerSettings()
     } catch {
       toast.error('Failed to load data')
     } finally {
@@ -324,6 +330,68 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
       toast.success('Group and submission deleted')
     } catch { toast.error('Failed to delete') }
     finally { setDeletingGroup(false) }
+  }
+
+  const loadTimerSettings = async () => {
+    try {
+      const res = await fetch('/api/admin/portal-settings')
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.closes_at) {
+        setExistingTimer(data.closes_at)
+        const d = new Date(data.closes_at)
+        setTimerDate(d.toISOString().slice(0, 10))
+        setTimerTime(d.toISOString().slice(11, 16))
+      } else {
+        setExistingTimer(null)
+      }
+    } catch {}
+  }
+
+  const saveTimer = async () => {
+    if (!timerDate || !timerTime) {
+      toast.error('Select both date and time')
+      return
+    }
+    const closesAt = new Date(`${timerDate}T${timerTime}:00`).toISOString()
+    setSavingTimer(true)
+    try {
+      const res = await fetch('/api/admin/portal-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ closes_at: closesAt }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        toast.error(err.error || 'Failed to save')
+        return
+      }
+      await loadTimerSettings()
+      toast.success('Timer saved — notification emails sent to all users')
+    } catch { toast.error('Failed to save timer') }
+    finally { setSavingTimer(false) }
+  }
+
+  const clearTimer = async () => {
+    if (!confirm('Remove the portal timer?')) return
+    setSavingTimer(true)
+    try {
+      const res = await fetch('/api/admin/portal-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ closes_at: null }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        toast.error(err.error || 'Failed to clear')
+        return
+      }
+      setExistingTimer(null)
+      setTimerDate('')
+      setTimerTime('')
+      toast.success('Timer cleared')
+    } catch { toast.error('Failed to clear timer') }
+    finally { setSavingTimer(false) }
   }
 
   const startEdit = (s: Submission) => {
@@ -785,6 +853,7 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
     { id: 'students', icon: '\uD83C\uDF93', label: 'Students' },
     { id: 'departments', icon: '\uD83C\uDFDB\uFE0F', label: 'Departments' },
     { id: 'submissions', icon: '\uD83D\uDCE6', label: 'Submissions' },
+    { id: 'settings', icon: '\u2699\uFE0F', label: 'Timer' },
   ]
 
   return (
@@ -1459,6 +1528,71 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {tab === 'settings' && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <h2 style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.5 }}>Portal Timer</h2>
+              </div>
+
+              <div className="card" style={{ maxWidth: 500, padding: 24 }}>
+                <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 20, lineHeight: 1.6 }}>
+                  Set a date and time for the portal to automatically close. When you save, all registered users
+                  will be emailed the deadline. When the timer reaches zero, users will be notified and you'll
+                  receive the final submission report.
+                </p>
+
+                {existingTimer && (
+                  <div style={{
+                    background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)',
+                    borderRadius: 10, padding: '12px 16px', marginBottom: 20,
+                  }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
+                      Current Timer
+                    </p>
+                    <p style={{ fontSize: 14, color: 'var(--text)' }}>
+                      {new Date(existingTimer).toLocaleString('en-GB', {
+                        day: 'numeric', month: 'long', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 180 }}>
+                    <label className="label">Date</label>
+                    <input
+                      className="input"
+                      type="date"
+                      value={timerDate}
+                      onChange={e => setTimerDate(e.target.value)}
+                    />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 140 }}>
+                    <label className="label">Time</label>
+                    <input
+                      className="input"
+                      type="time"
+                      value={timerTime}
+                      onChange={e => setTimerTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={saveTimer} className="btn btn-primary" disabled={savingTimer}>
+                    {savingTimer ? <><span className="spinner" /> Saving...</> : 'Set Timer & Notify All'}
+                  </button>
+                  {existingTimer && (
+                    <button onClick={clearTimer} className="btn btn-danger" disabled={savingTimer}>
+                      Clear Timer
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </main>

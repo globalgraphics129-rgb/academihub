@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { Toaster } from 'react-hot-toast'
+import PortalTimer from './components/PortalTimer'
 
 export const metadata: Metadata = {
   title: 'COS 102 Project Hub',
@@ -14,6 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="grid-bg" />
         <div className="orb orb-1" />
         <div className="orb orb-2" />
+        <PortalTimer />
         {children}
         <Toaster
           position="top-right"

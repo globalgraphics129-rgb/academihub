@@ -1,9 +1,10 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
 export default function RegisterDepartment() {
+  const [portalClosed, setPortalClosed] = useState(false)
   const [form, setForm] = useState({
     department: '',
     repName: '',
@@ -13,6 +14,32 @@ export default function RegisterDepartment() {
   })
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/portal-settings')
+      .then(r => r.json())
+      .then(data => {
+        if (data.closes_at && new Date(data.closes_at).getTime() < Date.now()) {
+          setPortalClosed(true)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  if (portalClosed) {
+    return (
+      <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <div style={{ textAlign: 'center', maxWidth: 400, padding: 24 }}>
+          <p style={{ fontSize: 48, marginBottom: 16 }}>{'\uD83D\uDD12'}</p>
+          <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: -1, marginBottom: 12 }}>Portal Closed</h1>
+          <p style={{ color: 'var(--text-2)', fontSize: 15, lineHeight: 1.7, marginBottom: 24 }}>
+            The submission portal has been closed. Department registration is no longer available.
+          </p>
+          <Link href="/" className="btn btn-secondary" style={{ display: 'inline-block' }}>← Back Home</Link>
+        </div>
+      </div>
+    )
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

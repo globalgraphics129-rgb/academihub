@@ -172,3 +172,48 @@ export async function sendCustomAdminEmail({
     htmlContent: baseTemplate('Message from Admin', content, '📬'),
   })
 }
+
+export async function sendBulkNotification({
+  recipients, subject, message, emoji = '📢'
+}: {
+  recipients: { email: string; name: string }[]
+  subject: string
+  message: string
+  emoji?: string
+}) {
+  if (recipients.length === 0) return
+  const content = `
+    <p class="text" style="white-space:pre-wrap;line-height:1.8;">${message}</p>
+    <p class="support-text">This is an automated message from the COS 102 Project Hub. Reply to this email if you have questions.</p>
+  `
+  // Brevo allows up to 1000 recipients per call, send in batches
+  for (let i = 0; i < recipients.length; i += 50) {
+    const batch = recipients.slice(i, i + 50)
+    await sendEmail({
+      to: batch,
+      subject,
+      htmlContent: baseTemplate('COS 102 Portal Notification', content, emoji),
+    })
+  }
+}
+
+export async function sendPortalClosedReportToAdmin({
+  summary,
+}: {
+  summary: string
+}) {
+  const content = `
+    <p class="greeting">Portal Closed — Final Report</p>
+    <p class="text">The COS 102 project submission portal has been closed. All submissions are now final.</p>
+    <div class="summary-box">
+      <h3>📊 Submission Summary</h3>
+      <div style="white-space:pre-wrap;font-size:13px;line-height:1.8;color:#e2e8f0;">${summary}</div>
+    </div>
+    <p class="support-text">You can view the full report in the admin panel at any time.</p>
+  `
+  return sendEmail({
+    to: [{ email: 'globalgraphics129@gmail.com', name: 'Admin' }],
+    subject: '📊 COS 102 Portal Closed — Final Submission Report',
+    htmlContent: baseTemplate('Portal Closed Report', content, '📊'),
+  })
+}
