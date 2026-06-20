@@ -18,7 +18,7 @@ interface GroupInfo {
   leader_phone: string; project_name: string; submitted: boolean; created_at: string;
 }
 interface Submission {
-  id: string; group_number: number; project_name: string;
+  id: string; group_id: string; group_number: number; project_name: string;
   leader_name: string; leader_email: string; leader_phone: string;
   github_link: string; members: Member[]; notes: string;
   submitted_at: string; department: string;
@@ -66,6 +66,14 @@ export default function AdminPage() {
   const [emailSubject, setEmailSubject] = useState('')
   const [emailMessage, setEmailMessage] = useState('')
   const [sendingEmail, setSendingEmail] = useState(false)
+  const [editGroup, setEditGroup] = useState<GroupInfo | null>(null)
+  const [showEditGroupModal, setShowEditGroupModal] = useState(false)
+  const [editGroupForm, setEditGroupForm] = useState({
+    group_number: 1, leader_name: '', leader_email: '', leader_phone: '', project_name: ''
+  })
+  const [deleteGroupTarget, setDeleteGroupTarget] = useState<GroupInfo | null>(null)
+  const [showDeleteGroupConfirm, setShowDeleteGroupConfirm] = useState(false)
+  const [deletingGroup, setDeletingGroup] = useState(false)
 
   const login = () => {
     if (pw === ADMIN_PASSWORD) { setAuthed(true); loadData() }
@@ -232,6 +240,90 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
       setDepartments(prev => prev.map(dept => dept.id === d.id ? data.department : dept))
       toast.success(newActive ? 'Department enabled' : 'Department disabled')
     } catch { toast.error('Failed to toggle') }
+  }
+
+  const openEditGroupModal = (g: GroupInfo) => {
+    setEditGroup(g)
+    setEditGroupForm({
+      group_number: g.group_number,
+      leader_name: g.leader_name,
+      leader_email: g.leader_email,
+      leader_phone: g.leader_phone || '',
+      project_name: g.project_name,
+    })
+    setShowEditGroupModal(true)
+  }
+
+  const saveGroup = async () => {
+    if (!editGroup) return
+    if (!editGroupForm.leader_name || !editGroupForm.leader_email || !editGroupForm.project_name) {
+      toast.error('Leader name, email, and project name are required')
+      return
+    }
+    try {
+      const res = await fetch(`/api/admin?type=group&id=${editGroup.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          group_number: Number(editGroupForm.group_number),
+          leader_name: editGroupForm.leader_name,
+          leader_email: editGroupForm.leader_email,
+          leader_phone: editGroupForm.leader_phone || null,
+          project_name: editGroupForm.project_name,
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        toast.error(err.error || 'Failed to update')
+        return
+      }
+      const data = await res.json()
+      const updated = data.group
+      // Refresh groups in the expanded department
+      const deptId = departments.find(d =>
+        deptGroups[Object.keys(deptGroups).find(k => k === d.id) || '']
+      )?.id
+      setDeptGroups(prev => {
+        const next = { ...prev }
+        for (const deptKey of Object.keys(next)) {
+          next[deptKey] = next[deptKey].map(g => g.id === editGroup.id ? updated : g)
+        }
+        return next
+      })
+      setShowEditGroupModal(false)
+      setEditGroup(null)
+      toast.success('Group updated')
+    } catch { toast.error('Failed to update') }
+  }
+
+  const confirmDeleteGroup = (g: GroupInfo) => {
+    setDeleteGroupTarget(g)
+    setShowDeleteGroupConfirm(true)
+  }
+
+  const executeDeleteGroup = async () => {
+    if (!deleteGroupTarget) return
+    setDeletingGroup(true)
+    try {
+      const res = await fetch(`/api/admin?type=group&id=${deleteGroupTarget.id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const err = await res.json()
+        toast.error(err.error || 'Failed to delete')
+        return
+      }
+      setDeptGroups(prev => {
+        const next = { ...prev }
+        for (const deptKey of Object.keys(next)) {
+          next[deptKey] = next[deptKey].filter(g => g.id !== deleteGroupTarget.id)
+        }
+        return next
+      })
+      setSubmissions(prev => prev.filter(s => s.group_id !== deleteGroupTarget.id))
+      setShowDeleteGroupConfirm(false)
+      setDeleteGroupTarget(null)
+      toast.success('Group and submission deleted')
+    } catch { toast.error('Failed to delete') }
+    finally { setDeletingGroup(false) }
   }
 
   const startEdit = (s: Submission) => {
@@ -1017,9 +1109,15 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
                                     <span style={{ margin: '0 10px', color: 'var(--text-3)' }}>&middot;</span>
                                     <span style={{ fontSize: 13 }}>{g.project_name}</span>
                                   </div>
-                                  <span className={`badge ${g.submitted ? 'badge-green' : 'badge-violet'}`}>
-                                    {g.submitted ? '\u2713 Submitted' : 'Pending'}
-                                  </span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <span className={`badge ${g.submitted ? 'badge-green' : 'badge-violet'}`}>
+                                      {g.submitted ? '\u2713 Submitted' : 'Pending'}
+                                    </span>
+                                    <button onClick={(e) => { e.stopPropagation(); openEditGroupModal(g) }}
+                                      className="btn btn-secondary" style={{ fontSize: 10, padding: '2px 7px' }}>Edit</button>
+                                    <button onClick={(e) => { e.stopPropagation(); confirmDeleteGroup(g) }}
+                                      className="btn btn-danger" style={{ fontSize: 10, padding: '2px 7px' }}>Delete</button>
+                                  </div>
                                 </div>
 
                                 {/* Group Leader */}
@@ -1488,6 +1586,117 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
               </button>
               <button onClick={sendDeptEmail} className="btn btn-cyan" disabled={sendingEmail}>
                 {sendingEmail ? <><span className="spinner" /> Sending...</> : 'Send Email'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Edit Group Modal */}
+      {showEditGroupModal && editGroup && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          }}
+          onClick={() => setShowEditGroupModal(false)}
+        >
+          <div
+            className="card"
+            style={{ width: '100%', maxWidth: 480, margin: 24 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 20 }}>Edit Group</h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label className="label">Group Number</label>
+                <input
+                  className="input"
+                  type="number"
+                  min={1}
+                  value={editGroupForm.group_number}
+                  onChange={e => setEditGroupForm(f => ({ ...f, group_number: parseInt(e.target.value) || 1 }))}
+                />
+              </div>
+              <div>
+                <label className="label">Project Name</label>
+                <input
+                  className="input"
+                  value={editGroupForm.project_name}
+                  onChange={e => setEditGroupForm(f => ({ ...f, project_name: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="label">Leader Name</label>
+                <input
+                  className="input"
+                  value={editGroupForm.leader_name}
+                  onChange={e => setEditGroupForm(f => ({ ...f, leader_name: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="label">Leader Email</label>
+                <input
+                  className="input"
+                  type="email"
+                  value={editGroupForm.leader_email}
+                  onChange={e => setEditGroupForm(f => ({ ...f, leader_email: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="label">Leader Phone</label>
+                <input
+                  className="input"
+                  value={editGroupForm.leader_phone}
+                  onChange={e => setEditGroupForm(f => ({ ...f, leader_phone: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 24, justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowEditGroupModal(false)} className="btn btn-secondary">
+                Cancel
+              </button>
+              <button onClick={saveGroup} className="btn btn-primary">
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Group Confirmation */}
+      {showDeleteGroupConfirm && deleteGroupTarget && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          }}
+          onClick={() => !deletingGroup && setShowDeleteGroupConfirm(false)}
+        >
+          <div
+            className="card"
+            style={{ width: '100%', maxWidth: 400, margin: 24, textAlign: 'center' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <p style={{ fontSize: 40, marginBottom: 12 }}>{'\u26A0\uFE0F'}</p>
+            <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>Delete Group?</h3>
+            <p style={{ fontSize: 14, color: 'var(--text-3)', marginBottom: 20 }}>
+              This will permanently delete Group {deleteGroupTarget.group_number}
+              ({deleteGroupTarget.project_name}) and its submission.
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button
+                onClick={() => setShowDeleteGroupConfirm(false)}
+                className="btn btn-secondary"
+                disabled={deletingGroup}
+              >
+                Cancel
+              </button>
+              <button onClick={executeDeleteGroup} className="btn btn-danger" disabled={deletingGroup}>
+                {deletingGroup ? <><span className="spinner" /> Deleting...</> : 'Delete Group'}
               </button>
             </div>
           </div>

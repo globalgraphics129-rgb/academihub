@@ -77,6 +77,14 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true })
   }
 
+  if (type === 'group') {
+    // Delete submission first, then the group
+    await supabaseAdmin.from('submissions').delete().eq('group_id', id)
+    const { error } = await supabaseAdmin.from('groups').delete().eq('id', id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true })
+  }
+
   if (type === 'department') {
     // Cascade: delete submissions and groups first
     const { data: groups } = await supabaseAdmin.from('groups').select('id').eq('department_id', id)
@@ -98,8 +106,38 @@ export async function PUT(req: NextRequest) {
   const type = searchParams.get('type')
   const id = searchParams.get('id')
 
-  if (type !== 'department' || !id) {
-    return NextResponse.json({ error: 'type=department and id are required' }, { status: 400 })
+  if (!id) {
+    return NextResponse.json({ error: 'id is required' }, { status: 400 })
+  }
+
+  if (type === 'group') {
+    const body = await req.json()
+    const { group_number, leader_name, leader_email, leader_phone, project_name } = body
+
+    const updates: Record<string, unknown> = {}
+    if (group_number !== undefined) updates.group_number = group_number
+    if (leader_name !== undefined) updates.leader_name = leader_name
+    if (leader_email !== undefined) updates.leader_email = leader_email
+    if (leader_phone !== undefined) updates.leader_phone = leader_phone
+    if (project_name !== undefined) updates.project_name = project_name
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('groups')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ group: data })
+  }
+
+  if (type !== 'department') {
+    return NextResponse.json({ error: 'type=department or type=group required' }, { status: 400 })
   }
 
   const body = await req.json()
