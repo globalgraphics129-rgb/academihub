@@ -1,13 +1,39 @@
--- COS 102 Project Hub — Supabase Schema
+-- AcademiHub — Complete Supabase Schema
 -- Run this in your Supabase SQL Editor
-
--- ⚠️ If you already have the old schema, run this migration first:
--- ALTER TABLE submissions ALTER COLUMN members TYPE JSONB USING members::jsonb;
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Departments table
+-- ====================================================================
+-- USERS & AUTH
+-- ====================================================================
+
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'rep' CHECK (role IN ('admin', 'rep', 'student')),
+  department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE sessions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX idx_sessions_token ON sessions(token);
+CREATE INDEX idx_sessions_user ON sessions(user_id);
+CREATE INDEX idx_users_email ON users(email);
+
+-- ====================================================================
+-- DEPARTMENTS
+-- ====================================================================
+
 CREATE TABLE departments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   department TEXT NOT NULL UNIQUE,
@@ -19,7 +45,10 @@ CREATE TABLE departments (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Groups table
+-- ====================================================================
+-- GROUPS
+-- ====================================================================
+
 CREATE TABLE groups (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   department_id UUID NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
@@ -33,7 +62,10 @@ CREATE TABLE groups (
   UNIQUE(department_id, group_number)
 );
 
--- Submissions table
+-- ====================================================================
+-- SUBMISSIONS
+-- ====================================================================
+
 CREATE TABLE submissions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   group_id UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
@@ -49,23 +81,10 @@ CREATE TABLE submissions (
   submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Row Level Security (disable for service role usage from API)
-ALTER TABLE departments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE groups ENABLE ROW LEVEL SECURITY;
-ALTER TABLE submissions ENABLE ROW LEVEL SECURITY;
+-- ====================================================================
+-- PORTAL SETTINGS
+-- ====================================================================
 
--- Allow public reads (for dropdowns on frontend)
-CREATE POLICY "Public read departments" ON departments FOR SELECT USING (true);
-CREATE POLICY "Public read groups" ON groups FOR SELECT USING (true);
-CREATE POLICY "Public read submissions" ON submissions FOR SELECT USING (true);
-
--- Only service role can insert/update/delete (handled via API routes)
--- (Service role bypasses RLS by default)
-
--- Migration: Add active column if upgrading from old schema
--- ALTER TABLE departments ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
-
--- Portal settings (single-row table for portal timer)
 CREATE TABLE portal_settings (
   id INTEGER PRIMARY KEY DEFAULT 1,
   closes_at TIMESTAMPTZ,
@@ -75,10 +94,28 @@ CREATE TABLE portal_settings (
   CONSTRAINT single_row CHECK (id = 1)
 );
 
--- Insert default row
 INSERT INTO portal_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 
--- Indexes for performance
+-- ====================================================================
+-- ROW LEVEL SECURITY
+-- ====================================================================
+
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE departments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE submissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE portal_settings ENABLE ROW LEVEL SECURITY;
+
+-- Allow public reads for dropdowns
+CREATE POLICY "Public read departments" ON departments FOR SELECT USING (true);
+CREATE POLICY "Public read groups" ON groups FOR SELECT USING (true);
+CREATE POLICY "Public read submissions" ON submissions FOR SELECT USING (true);
+
+-- ====================================================================
+-- INDEXES
+-- ====================================================================
+
 CREATE INDEX idx_groups_dept ON groups(department_id);
 CREATE INDEX idx_submissions_dept ON submissions(department);
 CREATE INDEX idx_submissions_submitted_at ON submissions(submitted_at DESC);

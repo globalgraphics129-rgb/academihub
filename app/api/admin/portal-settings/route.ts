@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
     const formattedDate = closeDate.toLocaleString('en-GB', {
       day: 'numeric', month: 'long', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
+      timeZone: 'Africa/Lagos',
     })
 
     try {
@@ -78,8 +79,8 @@ export async function POST(req: NextRequest) {
 
       await sendBulkNotification({
         recipients,
-        subject: `⏰ Portal Closes ${formattedDate} — COS 102 Project Hub`,
-        message: `The COS 102 project submission portal will close on ${formattedDate}.\n\nPlease ensure all your group's projects are submitted before this deadline. After the portal closes, no further submissions will be accepted.\n\nIf you have any issues, contact the admin.`,
+        subject: `⏰ Portal Closes ${formattedDate} — AcademiHub`,
+        message: `The project submission portal will close on ${formattedDate}.\n\nPlease ensure all your group's projects are submitted before this deadline. After the portal closes, no further submissions will be accepted.\n\nIf you have any issues, contact the admin.`,
         emoji: '⏰',
       })
 

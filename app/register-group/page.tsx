@@ -75,7 +75,7 @@ export default function RegisterGroup() {
           <div className="nav-inner">
             <Link href="/" className="nav-logo">
               <div className="nav-logo-icon">🎓</div>
-              <span className="nav-logo-text gradient-text">COS 102</span>
+              <span className="nav-logo-text gradient-text">AcademiHub</span>
             </Link>
           </div>
         </nav>
@@ -118,7 +118,7 @@ export default function RegisterGroup() {
         <div className="nav-inner">
           <Link href="/" className="nav-logo">
             <div className="nav-logo-icon">🎓</div>
-            <span className="nav-logo-text gradient-text">COS 102</span>
+            <span className="nav-logo-text gradient-text">AcademiHub</span>
           </Link>
           <div className="nav-links">
             <Link href="/" className="nav-link">← Home</Link>
@@ -212,7 +212,7 @@ export default function RegisterGroup() {
                     required
                   />
                   <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6 }}>
-                    What did your group build for COS 102?
+                    What project did your group build?
                   </p>
                 </div>
               </div>

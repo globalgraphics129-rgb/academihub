@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
+    "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
+    "core-js": "^3.49.0",
     "framer-motion": "^11.3.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",

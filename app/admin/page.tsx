@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { parseMatric, parseMemberEntry, fmtMembers } from '@/lib/matric'
+import ThemeToggle from '../components/ThemeToggle'
 
 interface Member {
   name: string; matric: string;
@@ -35,7 +36,7 @@ interface StudentEntry {
 
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'cos102admin'
 
-type Tab = 'overview' | 'departments' | 'submissions' | 'students' | 'settings'
+type Tab = 'overview' | 'departments' | 'submissions' | 'students' | 'announcements' | 'settings'
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false)
@@ -79,6 +80,9 @@ export default function AdminPage() {
   const [timerTime, setTimerTime] = useState('')
   const [savingTimer, setSavingTimer] = useState(false)
   const [existingTimer, setExistingTimer] = useState<string | null>(null)
+  const [announceSubject, setAnnounceSubject] = useState('')
+  const [announceMessage, setAnnounceMessage] = useState('')
+  const [sendingAnnounce, setSendingAnnounce] = useState(false)
 
   const login = () => {
     if (pw === ADMIN_PASSWORD) { setAuthed(true); loadData() }
@@ -191,10 +195,10 @@ export default function AdminPage() {
 
   const openEmailModal = (d: Department) => {
     setEmailDept(d)
-    setEmailSubject(`Re: ${d.department} Registration — COS 102 Project Hub`)
+    setEmailSubject(`Re: ${d.department} Registration — AcademiHub`)
     setEmailMessage(`Hi ${d.rep_name},
 
-I'm writing regarding your registration of ${d.department} on the COS 102 Project Hub.
+I'm writing regarding your registration of ${d.department} on AcademiHub.
 
 `)
     setShowEmailModal(true)
@@ -340,8 +344,8 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
       if (data.closes_at) {
         setExistingTimer(data.closes_at)
         const d = new Date(data.closes_at)
-        setTimerDate(d.toISOString().slice(0, 10))
-        setTimerTime(d.toISOString().slice(11, 16))
+        setTimerDate(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`)
+        setTimerTime(`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`)
       } else {
         setExistingTimer(null)
       }
@@ -525,7 +529,7 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
     const drawFooter = (pageNum?: number) => {
       doc.setFontSize(8)
       doc.setTextColor(TEXT_MUTED[0], TEXT_MUTED[1], TEXT_MUTED[2])
-      doc.text(`COS-102 Project Hub Report`, 16, ph - 8)
+      doc.text(`AcademiHub Report`, 16, ph - 8)
       if (pageNum) doc.text(`Page ${pageNum}`, pw - 16, ph - 8, { align: 'right' })
       doc.setDrawColor(200, 190, 220)
       doc.line(16, ph - 12, pw - 16, ph - 12)
@@ -548,7 +552,7 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
     doc.rect(0, ph / 2 + 36, pw, 1, 'F')
     doc.setTextColor(255, 255, 255)
     doc.setFontSize(36)
-    doc.text('COS-102 Project Hub', pw / 2, ph / 2 - 18, { align: 'center' })
+    doc.text('AcademiHub', pw / 2, ph / 2 - 18, { align: 'center' })
     doc.setFontSize(22)
     doc.setTextColor(CYAN[0], CYAN[1], CYAN[2])
     doc.text('Submissions Report', pw / 2, ph / 2 + 10, { align: 'center' })
@@ -800,10 +804,10 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
       doc.text(`Page ${i} of ${totalPages}`, pw - 16, ph - 8, { align: 'right' })
       doc.setDrawColor(200, 190, 220)
       doc.line(16, ph - 12, pw - 16, ph - 12)
-      doc.text(`COS-102 Project Hub Report`, 16, ph - 8)
+      doc.text(`AcademiHub Report`, 16, ph - 8)
     }
 
-    doc.save(`COS102-Project-Hub-Report-${Date.now()}.pdf`)
+    doc.save(`AcademiHub-Report-${Date.now()}.pdf`)
     toast.success('PDF exported!')
   }
 
@@ -823,7 +827,7 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
             <div className="emoji-lg">{'\uD83D\uDD10'}</div>
             <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: -1, marginBottom: 8 }}>Admin Access</h1>
-            <p style={{ color: 'var(--text-2)', fontSize: 14 }}>COS 102 Project Hub — Lecturer/Admin Only</p>
+            <p style={{ color: 'var(--text-2)', fontSize: 14 }}>AcademiHub — Lecturer/Admin Only</p>
           </div>
           <div className="card">
             <label className="label">Admin Password</label>
@@ -853,6 +857,7 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
     { id: 'students', icon: '\uD83C\uDF93', label: 'Students' },
     { id: 'departments', icon: '\uD83C\uDFDB\uFE0F', label: 'Departments' },
     { id: 'submissions', icon: '\uD83D\uDCE6', label: 'Submissions' },
+    { id: 'announcements', icon: '\uD83D\uDCE2', label: 'Announce' },
     { id: 'settings', icon: '\u2699\uFE0F', label: 'Timer' },
   ]
 
@@ -862,7 +867,7 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
         <div className="nav-inner">
           <Link href="/" className="nav-logo">
             <div className="nav-logo-icon">{'\uD83C\uDF93'}</div>
-            <span className="nav-logo-text gradient-text">COS 102</span>
+            <span className="nav-logo-text gradient-text">AcademiHub</span>
           </Link>
           <div className="nav-links">
             <span className="badge badge-violet">Admin Panel</span>
@@ -872,6 +877,7 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
             <button onClick={exportPDF} className="btn btn-cyan" style={{ fontSize: 12, padding: '6px 12px' }}>
               {'\u2B07'} Export PDF Report
             </button>
+            <ThemeToggle />
           </div>
         </div>
       </nav>
@@ -1531,6 +1537,81 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
             </div>
           )}
 
+          {tab === 'announcements' && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <h2 style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.5 }}>Announcements</h2>
+              </div>
+
+              <div className="card" style={{ maxWidth: 600, padding: 24 }}>
+                <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 20, lineHeight: 1.6 }}>
+                  Send an email announcement to all registered class reps and group leaders.
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <label className="label">Subject</label>
+                    <input
+                      className="input"
+                      value={announceSubject}
+                      onChange={e => setAnnounceSubject(e.target.value)}
+                      placeholder="e.g. Important Update: Submission Guidelines"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Message</label>
+                    <textarea
+                      className="input"
+                      rows={10}
+                      value={announceMessage}
+                      onChange={e => setAnnounceMessage(e.target.value)}
+                      placeholder="Write your announcement message here..."
+                      style={{ resize: 'vertical', minHeight: 200, fontFamily: 'inherit', lineHeight: 1.6 }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+                  <button
+                    onClick={async () => {
+                      if (!announceSubject || !announceMessage) {
+                        toast.error('Subject and message are required')
+                        return
+                      }
+                      setSendingAnnounce(true)
+                      try {
+                        const res = await fetch('/api/admin/announce', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            subject: announceSubject,
+                            message: announceMessage,
+                          }),
+                        })
+                        if (!res.ok) {
+                          const err = await res.json()
+                          toast.error(err.error || 'Failed to send')
+                          return
+                        }
+                        toast.success('Announcement sent to all users!')
+                        setAnnounceSubject('')
+                        setAnnounceMessage('')
+                      } catch {
+                        toast.error('Failed to send announcement')
+                      } finally {
+                        setSendingAnnounce(false)
+                      }
+                    }}
+                    className="btn btn-primary"
+                    disabled={sendingAnnounce}
+                  >
+                    {sendingAnnounce ? <><span className="spinner" /> Sending...</> : '\uD83D\uDCE2 Send Announcement to All'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {tab === 'settings' && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
@@ -1539,9 +1620,9 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
 
               <div className="card" style={{ maxWidth: 500, padding: 24 }}>
                 <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 20, lineHeight: 1.6 }}>
-                  Set a date and time for the portal to automatically close. When you save, all registered users
-                  will be emailed the deadline. When the timer reaches zero, users will be notified and you&apos;ll
-                  receive the final submission report.
+                  Set a date and time for the portal to automatically close. Times are in Africa/Lagos (WAT).
+                  All users will be emailed the deadline. When the timer reaches zero, users will be notified
+                  and you&apos;ll receive the final submission report.
                 </p>
 
                 {existingTimer && (
@@ -1556,7 +1637,8 @@ I'm writing regarding your registration of ${d.department} on the COS 102 Projec
                       {new Date(existingTimer).toLocaleString('en-GB', {
                         day: 'numeric', month: 'long', year: 'numeric',
                         hour: '2-digit', minute: '2-digit',
-                      })}
+                        timeZone: 'Africa/Lagos',
+                      })} <span style={{ fontSize: 11, color: 'var(--text-3)' }}>(WAT)</span>
                     </p>
                   </div>
                 )}

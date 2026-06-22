@@ -156,7 +156,7 @@ export default function SubmitProject() {
           <div className="nav-inner">
             <Link href="/" className="nav-logo">
               <div className="nav-logo-icon">🎓</div>
-              <span className="nav-logo-text gradient-text">COS 102</span>
+              <span className="nav-logo-text gradient-text">AcademiHub</span>
             </Link>
           </div>
         </nav>
@@ -236,7 +236,7 @@ export default function SubmitProject() {
         <div className="nav-inner">
           <Link href="/" className="nav-logo">
             <div className="nav-logo-icon">🎓</div>
-            <span className="nav-logo-text gradient-text">COS 102</span>
+            <span className="nav-logo-text gradient-text">AcademiHub</span>
           </Link>
           <div className="nav-links">
             <Link href="/" className="nav-link">← Home</Link>
