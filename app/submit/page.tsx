@@ -1,20 +1,27 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { Suspense, useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { parseMemberEntry } from '@/lib/matric'
-import { GraduationCap, Users, Rocket, Building2, ArrowLeft, ArrowRight, Lock, Github, FileText, X } from 'lucide-react'
+import { GraduationCap, Users, Rocket, Building2, ArrowLeft, ArrowRight, Lock, FileText, X, BookOpen } from 'lucide-react'
 
 interface Department { id: string; department: string; number_of_groups: number }
 interface Group { id: string; group_number: number; leader_name: string; project_name: string; submitted: boolean }
+interface Project { id: string; name: string; description: string | null }
 interface Member { name: string; matric: string }
 
 type InputMode = 'manual' | 'bulk' | 'upload'
 
-export default function SubmitProject() {
+function SubmitProjectInner() {
+  const searchParams = useSearchParams()
+  const projectIdParam = searchParams.get('projectId')
+
   const [portalClosed, setPortalClosed] = useState(false)
   const [departments, setDepartments] = useState<Department[]>([])
   const [groups, setGroups] = useState<Group[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
+  const [selectedProjectId, setSelectedProjectId] = useState(projectIdParam || '')
   const [selectedDept, setSelectedDept] = useState('')
   const [selectedGroup, setSelectedGroup] = useState('')
   const [members, setMembers] = useState<Member[]>([])
@@ -30,6 +37,13 @@ export default function SubmitProject() {
   const [submittedData, setSubmittedData] = useState<any>(null)
   const nameRef = useRef<HTMLInputElement>(null)
 
+  const loadDepts = (projId: string) => {
+    const url = projId ? `/api/register-department?projectId=${projId}` : '/api/register-department'
+    fetch(url)
+      .then(r => r.json())
+      .then(data => setDepartments(data.departments || []))
+  }
+
   useEffect(() => {
     fetch('/api/portal-settings')
       .then(r => r.json())
@@ -39,10 +53,25 @@ export default function SubmitProject() {
         }
       })
       .catch(() => {})
-    fetch('/api/register-department')
+    fetch('/api/projects')
       .then(r => r.json())
-      .then(data => setDepartments(data.departments || []))
-  }, [])
+      .then(data => {
+        const list = data.projects || []
+        setProjects(list)
+        if (projectIdParam) {
+          setSelectedProjectId(projectIdParam)
+          loadDepts(projectIdParam)
+        }
+      })
+      .catch(() => {})
+  }, [projectIdParam])
+
+  const handleProjectSelect = (projId: string) => {
+    setSelectedProjectId(projId)
+    setSelectedDept('')
+    setSelectedGroup('')
+    loadDepts(projId)
+  }
 
   useEffect(() => {
     if (!selectedDept) { setGroups([]); setSelectedGroup(''); return }
@@ -203,7 +232,7 @@ export default function SubmitProject() {
             )}
           </div>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/" className="btn btn-primary">Back to Home</Link>
+            <Link href={`/`} className="btn btn-primary">Back to Home</Link>
           </div>
         </div>
       </div>
@@ -240,7 +269,7 @@ export default function SubmitProject() {
             <span className="nav-logo-text gradient-text">AcademiHub</span>
           </Link>
           <div className="nav-links">
-            <Link href="/" className="nav-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowLeft size={14} /> Home</Link>
+            <Link href="/" className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowLeft size={14} /> Home</Link>
           </div>
         </div>
       </nav>
@@ -273,6 +302,49 @@ export default function SubmitProject() {
           </div>
         </div>
 
+        {!projectIdParam && projects.length > 0 && (
+          <div className="card" style={{ marginBottom: 16, animation: 'fade-up 0.5s 0.15s ease both', opacity: 0 }}>
+            <h3 style={{ fontSize: 11, fontWeight: 700, marginBottom: 16, color: 'var(--violet-light)', fontFamily: 'Syne, sans-serif', textTransform: 'uppercase', letterSpacing: 1 }}>
+              Select Project
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {projects.map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => handleProjectSelect(p.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px',
+                    borderRadius: 10, border: `2px solid ${selectedProjectId === p.id ? 'var(--primary)' : 'var(--border)'}`,
+                    background: selectedProjectId === p.id ? 'rgba(5,150,105,0.08)' : 'transparent',
+                    cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', width: '100%',
+                  }}
+                >
+                  <BookOpen size={20} style={{ color: selectedProjectId === p.id ? 'var(--primary)' : 'var(--text-3)', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{p.name}</div>
+                    {p.description && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{p.description}</div>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!selectedProjectId && projects.length === 0 && (
+          <div className="card" style={{ textAlign: 'center', padding: 40, marginBottom: 16 }}>
+            <BookOpen size={32} style={{ marginBottom: 12 }} />
+            <p style={{ color: 'var(--text-2)' }}>No active projects available for submission.</p>
+          </div>
+        )}
+
+        {!selectedProjectId && (
+          <div style={{ textAlign: 'center', padding: 40 }}>
+            <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Select a project above to continue.</p>
+          </div>
+        )}
+
+        {selectedProjectId && (
         <form onSubmit={handleSubmit} style={{ animation: 'fade-up 0.5s 0.2s ease both', opacity: 0 }}>
           {/* Department & Group */}
           <div className="card" style={{ marginBottom: 16 }}>
@@ -297,7 +369,7 @@ export default function SubmitProject() {
                   <label className="label">Your Group *</label>
                   {groups.length === 0 ? (
                     <div style={{ padding: '12px 16px', border: '1px solid var(--border)', borderRadius: 10, fontSize: 14, color: 'var(--text-3)' }}>
-                      No groups registered yet. <Link href="/register-group" style={{ color: 'var(--violet-light)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>Register your group first <ArrowRight size={14} /></Link>
+                      No groups registered yet. <Link href={`/register-group?projectId=${selectedProjectId}`} style={{ color: 'var(--violet-light)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>Register your group first <ArrowRight size={14} /></Link>
                     </div>
                   ) : (
                     <select
@@ -520,7 +592,16 @@ export default function SubmitProject() {
             A confirmation email will be sent after submission.
           </p>
         </form>
+        )}
       </div>
     </div>
+  )
+}
+
+export default function SubmitProjectPage() {
+  return (
+    <Suspense fallback={<div className="page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}><div className="spinner" style={{ width: 32, height: 32 }} /></div>}>
+      <SubmitProjectInner />
+    </Suspense>
   )
 }

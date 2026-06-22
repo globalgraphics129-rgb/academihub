@@ -4,21 +4,31 @@ import { supabaseAdmin } from '@/lib/supabase'
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const type = searchParams.get('type')
+  const projectId = searchParams.get('projectId')
 
   if (type === 'departments') {
-    const { data, error } = await supabaseAdmin
-      .from('departments')
-      .select('*')
-      .order('created_at', { ascending: false })
+    let query = supabaseAdmin.from('departments').select('*')
+    if (projectId) query = query.eq('project_id', projectId)
+    const { data, error } = await query.order('created_at', { ascending: false })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ departments: data })
   }
 
   if (type === 'submissions') {
-    const { data, error } = await supabaseAdmin
-      .from('submissions')
-      .select('*')
-      .order('submitted_at', { ascending: false })
+    let query = supabaseAdmin.from('submissions').select('*')
+    if (projectId) {
+      const { data: groupIds } = await supabaseAdmin
+        .from('groups')
+        .select('id')
+        .eq('project_id', projectId)
+      const ids = (groupIds || []).map(g => g.id)
+      if (ids.length > 0) {
+        query = query.in('group_id', ids)
+      } else {
+        return NextResponse.json({ submissions: [] })
+      }
+    }
+    const { data, error } = await query.order('submitted_at', { ascending: false })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ submissions: data })
   }

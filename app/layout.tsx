@@ -7,6 +7,9 @@ import ThemeToggle from './components/ThemeToggle'
 export const metadata: Metadata = {
   title: 'AcademiHub — Academic Project Management',
   description: 'Streamline project submissions, manage departments, and track academic projects in one place.',
+  icons: {
+    icon: '/favicon.svg',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

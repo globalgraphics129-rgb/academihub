@@ -1,18 +1,25 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { GraduationCap, Users, Building2, ArrowLeft, ArrowRight, Lock } from 'lucide-react'
+import { GraduationCap, Users, Building2, ArrowLeft, ArrowRight, Lock, BookOpen } from 'lucide-react'
 
 interface Department {
   id: string
   department: string
   number_of_groups: number
 }
+interface Project { id: string; name: string; description: string | null }
 
-export default function RegisterGroup() {
+function RegisterGroupInner() {
+  const searchParams = useSearchParams()
+  const projectIdParam = searchParams.get('projectId')
+
   const [portalClosed, setPortalClosed] = useState(false)
   const [departments, setDepartments] = useState<Department[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
+  const [selectedProjectId, setSelectedProjectId] = useState(projectIdParam || '')
   const [form, setForm] = useState({
     departmentId: '',
     groupNumber: '',
@@ -25,6 +32,15 @@ export default function RegisterGroup() {
   const [fetching, setFetching] = useState(true)
   const [done, setDone] = useState(false)
 
+  const loadDepts = (projId: string) => {
+    setFetching(true)
+    const url = projId ? `/api/register-department?projectId=${projId}` : '/api/register-department'
+    fetch(url)
+      .then(r => r.json())
+      .then(data => { setDepartments(data.departments || []); setFetching(false) })
+      .catch(() => setFetching(false))
+  }
+
   useEffect(() => {
     fetch('/api/portal-settings')
       .then(r => r.json())
@@ -34,11 +50,26 @@ export default function RegisterGroup() {
         }
       })
       .catch(() => {})
-    fetch('/api/register-department')
+    fetch('/api/projects')
       .then(r => r.json())
-      .then(data => { setDepartments(data.departments || []); setFetching(false) })
+      .then(data => {
+        const list = data.projects || []
+        setProjects(list)
+        if (projectIdParam) {
+          setSelectedProjectId(projectIdParam)
+          loadDepts(projectIdParam)
+        } else {
+          setFetching(false)
+        }
+      })
       .catch(() => setFetching(false))
-  }, [])
+  }, [projectIdParam])
+
+  const handleProjectSelect = (projId: string) => {
+    setSelectedProjectId(projId)
+    setForm(f => ({ ...f, departmentId: '', groupNumber: '' }))
+    loadDepts(projId)
+  }
 
   const selectedDept = departments.find(d => d.id === form.departmentId)
   const groupOptions = selectedDept
@@ -90,7 +121,7 @@ export default function RegisterGroup() {
             Now go ahead and submit your project!
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/submit" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Next: Submit Project <ArrowRight size={14} /></Link>
+            <Link href={`/submit?projectId=${selectedProjectId || ''}`} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Next: Submit Project <ArrowRight size={14} /></Link>
             <Link href="/" className="btn btn-secondary">Back Home</Link>
           </div>
         </div>
@@ -122,7 +153,7 @@ export default function RegisterGroup() {
             <span className="nav-logo-text gradient-text">AcademiHub</span>
           </Link>
           <div className="nav-links">
-            <Link href="/" className="nav-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowLeft size={14} /> Home</Link>
+            <Link href="/" className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowLeft size={14} /> Home</Link>
           </div>
         </div>
       </nav>
@@ -134,7 +165,7 @@ export default function RegisterGroup() {
             Register Your Group
           </h1>
           <p style={{ color: 'var(--text-2)', fontSize: 15, lineHeight: 1.6 }}>
-            Group leaders: register your group under your department. You&apos;ll add members when you submit.
+            Group leaders: register your group under your department. You will add members when you submit.
           </p>
         </div>
 
@@ -155,16 +186,50 @@ export default function RegisterGroup() {
           </div>
         </div>
 
+        {!projectIdParam && projects.length > 0 && (
+          <div className="card" style={{ marginBottom: 16, animation: 'fade-up 0.5s 0.15s ease both', opacity: 0 }}>
+            <h3 style={{ fontSize: 11, fontWeight: 700, marginBottom: 16, color: 'var(--violet-light)', fontFamily: 'Syne, sans-serif', textTransform: 'uppercase', letterSpacing: 1 }}>
+              Select Project
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {projects.map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => handleProjectSelect(p.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px',
+                    borderRadius: 10, border: `2px solid ${selectedProjectId === p.id ? 'var(--primary)' : 'var(--border)'}`,
+                    background: selectedProjectId === p.id ? 'rgba(5,150,105,0.08)' : 'transparent',
+                    cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', width: '100%',
+                  }}
+                >
+                  <BookOpen size={20} style={{ color: selectedProjectId === p.id ? 'var(--primary)' : 'var(--text-3)', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{p.name}</div>
+                    {p.description && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{p.description}</div>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {fetching ? (
           <div style={{ textAlign: 'center', padding: 60 }}>
             <div className="spinner" style={{ width: 32, height: 32, margin: '0 auto 12px' }} />
             <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Loading departments...</p>
           </div>
+        ) : !selectedProjectId ? (
+          <div className="card" style={{ textAlign: 'center', padding: 40 }}>
+            <BookOpen size={32} style={{ marginBottom: 12 }} />
+            <p style={{ color: 'var(--text-2)', marginBottom: 20 }}>Select a project above to see its departments.</p>
+          </div>
         ) : departments.length === 0 ? (
           <div className="card" style={{ textAlign: 'center', padding: 40 }}>
             <Building2 size={32} style={{ marginBottom: 12 }} />
-            <p style={{ color: 'var(--text-2)', marginBottom: 20 }}>No departments registered yet.</p>
-            <Link href="/register-department" className="btn btn-primary">Register a Department First</Link>
+            <p style={{ color: 'var(--text-2)', marginBottom: 20 }}>No departments registered for this project yet.</p>
+            <Link href={`/register-department?projectId=${selectedProjectId}`} className="btn btn-primary">Register a Department First</Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ animation: 'fade-up 0.5s 0.2s ease both', opacity: 0 }}>
@@ -270,5 +335,13 @@ export default function RegisterGroup() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function RegisterGroupPage() {
+  return (
+    <Suspense fallback={<div className="page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}><div className="spinner" style={{ width: 32, height: 32 }} /></div>}>
+      <RegisterGroupInner />
+    </Suspense>
   )
 }

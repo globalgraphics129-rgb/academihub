@@ -1,11 +1,20 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { GraduationCap, Building2, ArrowLeft, ArrowRight, Lock } from 'lucide-react'
+import { GraduationCap, Building2, ArrowLeft, ArrowRight, Lock, BookOpen } from 'lucide-react'
 
-export default function RegisterDepartment() {
+interface Project { id: string; name: string; description: string | null }
+
+function RegisterDepartmentInner() {
+  const searchParams = useSearchParams()
+  const projectIdParam = searchParams.get('projectId')
+
   const [portalClosed, setPortalClosed] = useState(false)
+  const [projects, setProjects] = useState<Project[]>([])
+  const [selectedProjectId, setSelectedProjectId] = useState(projectIdParam || '')
+  const [selectedProjectName, setSelectedProjectName] = useState('')
   const [form, setForm] = useState({
     department: '',
     repName: '',
@@ -25,7 +34,21 @@ export default function RegisterDepartment() {
         }
       })
       .catch(() => {})
-  }, [])
+    fetch('/api/projects')
+      .then(r => r.json())
+      .then(data => {
+        const list = data.projects || []
+        setProjects(list)
+        if (!projectIdParam && list.length > 0) {
+          setSelectedProjectId(list[0].id)
+          setSelectedProjectName(list[0].name)
+        } else if (projectIdParam) {
+          const match = list.find((p: Project) => p.id === projectIdParam)
+          if (match) setSelectedProjectName(match.name)
+        }
+      })
+      .catch(() => {})
+  }, [projectIdParam])
 
   if (portalClosed) {
     return (
@@ -44,6 +67,7 @@ export default function RegisterDepartment() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!selectedProjectId) { toast.error('Select a project first'); return }
     if (!form.department || !form.repName || !form.repEmail || !form.numberOfGroups) {
       toast.error('Please fill in all required fields')
       return
@@ -57,7 +81,7 @@ export default function RegisterDepartment() {
       const res = await fetch('/api/register-department', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, projectId: selectedProjectId }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Registration failed')
@@ -92,7 +116,7 @@ export default function RegisterDepartment() {
             Share the submission link with your group leaders.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/register-group" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Next: Register Groups <ArrowRight size={14} /></Link>
+            <Link href={`/register-group?projectId=${selectedProjectId}`} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Next: Register Groups <ArrowRight size={14} /></Link>
             <Link href="/" className="btn btn-secondary">Back Home</Link>
           </div>
         </div>
@@ -109,7 +133,7 @@ export default function RegisterDepartment() {
             <span className="nav-logo-text gradient-text">AcademiHub</span>
           </Link>
           <div className="nav-links">
-            <Link href="/" className="nav-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowLeft size={14} /> Home</Link>
+            <Link href="/" className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowLeft size={14} /> Home</Link>
           </div>
         </div>
       </nav>
@@ -125,7 +149,6 @@ export default function RegisterDepartment() {
           </p>
         </div>
 
-        {/* Steps */}
         <div className="steps" style={{ animation: 'fade-up 0.5s 0.1s ease both', opacity: 0 }}>
           <div className="step">
             <div className="step-dot active">1</div>
@@ -143,7 +166,46 @@ export default function RegisterDepartment() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ animation: 'fade-up 0.5s 0.2s ease both', opacity: 0 }}>
+        {!projectIdParam && projects.length > 0 && (
+          <div className="card" style={{ marginBottom: 16, animation: 'fade-up 0.5s 0.15s ease both', opacity: 0 }}>
+            <h3 style={{ fontSize: 11, fontWeight: 700, marginBottom: 16, color: 'var(--violet-light)', fontFamily: 'Syne, sans-serif', textTransform: 'uppercase', letterSpacing: 1 }}>
+              Select Project
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {projects.map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => { setSelectedProjectId(p.id); setSelectedProjectName(p.name) }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px',
+                    borderRadius: 10, border: `2px solid ${selectedProjectId === p.id ? 'var(--primary)' : 'var(--border)'}`,
+                    background: selectedProjectId === p.id ? 'rgba(5,150,105,0.08)' : 'transparent',
+                    cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', width: '100%',
+                  }}
+                >
+                  <BookOpen size={20} style={{ color: selectedProjectId === p.id ? 'var(--primary)' : 'var(--text-3)', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{p.name}</div>
+                    {p.description && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{p.description}</div>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {selectedProjectName && (
+          <div style={{
+            animation: 'fade-up 0.5s 0.2s ease both', opacity: 0,
+            display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16,
+            fontSize: 12, color: 'var(--primary-light)', fontWeight: 600,
+          }}>
+            <BookOpen size={14} /> {selectedProjectName}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ animation: 'fade-up 0.5s 0.25s ease both', opacity: 0 }}>
           <div className="card" style={{ marginBottom: 16 }}>
             <h3 style={{ fontWeight: 700, marginBottom: 20, color: 'var(--violet-light)', fontFamily: 'Syne, sans-serif', textTransform: 'uppercase', letterSpacing: 1, fontSize: 11 }}>
               Department Details
@@ -207,7 +269,7 @@ export default function RegisterDepartment() {
                   required
                 />
                 <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6 }}>
-                  You&apos;ll receive a confirmation email here.
+                  You will receive a confirmation email here.
                 </p>
               </div>
               <div>
@@ -227,12 +289,20 @@ export default function RegisterDepartment() {
             type="submit"
             className="btn btn-primary"
             style={{ width: '100%', padding: '16px', fontSize: 15 }}
-            disabled={loading}
+            disabled={loading || !selectedProjectId}
           >
             {loading ? <><span className="spinner" /> Registering...</> : <><Building2 size={18} style={{ marginRight: 8, verticalAlign: 'middle' }} /> Register Department</>}
           </button>
         </form>
       </div>
     </div>
+  )
+}
+
+export default function RegisterDepartmentPage() {
+  return (
+    <Suspense fallback={<div className="page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}><div className="spinner" style={{ width: 32, height: 32 }} /></div>}>
+      <RegisterDepartmentInner />
+    </Suspense>
   )
 }

@@ -70,4 +70,9 @@ declare module 'lucide-react' {
   export const ChevronDown: Icon
   export const TriangleAlert: Icon
   export const Flag: Icon
+  export const XCircle: Icon
+  export const CircleX: Icon
+  export const KeyRound: Icon
+  export const ArrowRightFromLine: Icon
+  export const ArrowLeftFromLine: Icon
 }

@@ -15,14 +15,13 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { closes_at } = body
+  const { closes_at, projectId } = body
 
   const updates: Record<string, any> = {
     updated_at: new Date().toISOString(),
   }
 
   if (closes_at === null) {
-    // Clearing the timer
     updates.closes_at = null
     updates.closing_soon_notified = false
     updates.closed_notified = false
@@ -43,8 +42,7 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Only send notifications if setting a timer (not clearing)
-  if (closes_at) {
+  if (closes_at && !body.skipNotify) {
     const closeDate = new Date(closes_at)
     const formattedDate = closeDate.toLocaleString('en-GB', {
       day: 'numeric', month: 'long', year: 'numeric',
@@ -53,9 +51,16 @@ export async function POST(req: NextRequest) {
     })
 
     try {
-      // Collect all unique users
-      const { data: depts } = await supabaseAdmin.from('departments').select('rep_email, rep_name')
-      const { data: groups } = await supabaseAdmin.from('groups').select('leader_email, leader_name')
+      let deptQuery = supabaseAdmin.from('departments').select('rep_email, rep_name')
+      let groupQuery = supabaseAdmin.from('groups').select('leader_email, leader_name')
+
+      if (projectId) {
+        deptQuery = deptQuery.eq('project_id', projectId)
+        groupQuery = groupQuery.eq('project_id', projectId)
+      }
+
+      const { data: depts } = await deptQuery
+      const { data: groups } = await groupQuery
 
       const recipients: { email: string; name: string }[] = []
       const seen = new Set<string>()
@@ -77,13 +82,15 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      await sendBulkNotification({
-        recipients,
-        subject: `Portal Closes ${formattedDate} — AcademiHub`,
-        message: `The project submission portal will close on ${formattedDate}.\n\nPlease ensure all your group's projects are submitted before this deadline. After the portal closes, no further submissions will be accepted.\n\nIf you have any issues, contact the admin.`,
-      })
+      if (recipients.length > 0) {
+        const projectSuffix = projectId ? ' for this project' : ''
+        await sendBulkNotification({
+          recipients,
+          subject: `Portal Closes ${formattedDate} — AcademiHub`,
+          message: `The project submission portal will close on ${formattedDate}.${projectSuffix}\n\nPlease ensure all your group's projects are submitted before this deadline. After the portal closes, no further submissions will be accepted.\n\nIf you have any issues, contact the admin.`,
+        })
+      }
 
-      // Mark closing soon as notified
       await supabaseAdmin.from('portal_settings').update({ closing_soon_notified: true }).eq('id', 1)
     } catch (e) {
       console.error('Failed to send notification emails:', e)

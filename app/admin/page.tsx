@@ -6,7 +6,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { parseMatric, parseMemberEntry, fmtMembers } from '@/lib/matric'
 import ThemeToggle from '../components/ThemeToggle'
-import { GraduationCap, Building2, Users, Package, Send, Timer, LayoutDashboard, BarChart3, Lock, ArrowLeft, ArrowRight, Download, RefreshCw, ExternalLink, Plus, ChevronDown, ChevronRight, Mail, Edit, Trash2, X, Check, User, Search, Globe, FileText, Rocket, BookOpen, List, Grid3X3, Settings, Bell, ClipboardList, UserPlus, TriangleAlert } from 'lucide-react'
+import { GraduationCap, Building2, Users, Package, Send, Timer, LayoutDashboard, BarChart3, Lock, ArrowLeft, ArrowRight, Download, RefreshCw, ExternalLink, Plus, ChevronDown, ChevronRight, Mail, Edit, Trash2, X, Check, User, Search, Globe, FileText, Rocket, BookOpen, List, Grid3X3, Settings, Bell, ClipboardList, UserPlus, TriangleAlert, Menu } from 'lucide-react'
 
 interface Member {
   name: string; matric: string;
@@ -39,7 +39,7 @@ interface StudentEntry {
   department: string
 }
 
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'cos102admin'
+const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'academihubadmin'
 
 type Tab = 'overview' | 'departments' | 'submissions' | 'students' | 'announcements' | 'projects' | 'settings'
 
@@ -94,18 +94,33 @@ export default function AdminPage() {
   const [newProjectDesc, setNewProjectDesc] = useState('')
   const [creatingProject, setCreatingProject] = useState(false)
   const [clearingProject, setClearingProject] = useState<string | null>(null)
+  const [deletingProject, setDeletingProject] = useState<string | null>(null)
+  const [notifyProjectId, setNotifyProjectId] = useState<string>('')
+  const [filterProject, setFilterProject] = useState('')
+  const [showPdfOptions, setShowPdfOptions] = useState(false)
+  const [pdfSelectedProjects, setPdfSelectedProjects] = useState<string[]>([])
+  const [exportPdfLoading, setExportPdfLoading] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const login = () => {
-    if (pw === ADMIN_PASSWORD) { setAuthed(true); loadData() }
+    if (pw === ADMIN_PASSWORD) { setAuthed(true) }
     else toast.error('Incorrect password')
   }
+
+  useEffect(() => {
+    if (authed) loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, filterProject])
 
   const loadData = async () => {
     setLoading(true)
     try {
+      const pid = filterProject || undefined
+      const deptUrl = pid ? `/api/admin?type=departments&projectId=${pid}` : '/api/admin?type=departments'
+      const subUrl = pid ? `/api/admin?type=submissions&projectId=${pid}` : '/api/admin?type=submissions'
       const [dRes, sRes] = await Promise.all([
-        fetch('/api/admin?type=departments'),
-        fetch('/api/admin?type=submissions'),
+        fetch(deptUrl),
+        fetch(subUrl),
       ])
       const dData = await dRes.json()
       const sData = await sRes.json()
@@ -372,7 +387,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
     } catch {}
   }
 
-  const saveTimer = async () => {
+  const saveTimer = async (projectId?: string, skipNotify?: boolean) => {
     if (!timerDate || !timerTime) {
       toast.error('Select both date and time')
       return
@@ -383,7 +398,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
       const res = await fetch('/api/admin/portal-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ closes_at: closesAt }),
+        body: JSON.stringify({ closes_at: closesAt, projectId: projectId || null, skipNotify: skipNotify || false }),
       })
       if (!res.ok) {
         const err = await res.json()
@@ -391,7 +406,13 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
         return
       }
       await loadTimerSettings()
-      toast.success('Timer saved — notification emails sent to all users')
+      if (skipNotify) toast.success('Timer saved — no notifications sent')
+      else if (projectId) {
+        const proj = projects.find(p => p.id === projectId)
+        toast.success(proj ? `Timer saved — ${proj.name} notified` : 'Timer saved — project notified')
+      } else {
+        toast.success('Timer saved — all users notified')
+      }
     } catch { toast.error('Failed to save timer') }
     finally { setSavingTimer(false) }
   }
@@ -415,6 +436,40 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
       setTimerTime('')
       toast.success('Timer cleared')
     } catch { toast.error('Failed to clear timer') }
+    finally { setSavingTimer(false) }
+  }
+
+  const openPortal = async () => {
+    setSavingTimer(true)
+    try {
+      const res = await fetch('/api/admin/portal-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ closes_at: null }),
+      })
+      if (!res.ok) { const err = await res.json(); toast.error(err.error || 'Failed'); return }
+      setExistingTimer(null)
+      setTimerDate('')
+      setTimerTime('')
+      toast.success('Portal is now open')
+    } catch { toast.error('Failed to open portal') }
+    finally { setSavingTimer(false) }
+  }
+
+  const closePortal = async () => {
+    if (!confirm('Close the portal now? Submissions will stop immediately.')) return
+    setSavingTimer(true)
+    try {
+      const now = new Date().toISOString()
+      const res = await fetch('/api/admin/portal-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ closes_at: now }),
+      })
+      if (!res.ok) { const err = await res.json(); toast.error(err.error || 'Failed'); return }
+      setExistingTimer(now)
+      toast.success('Portal is now closed')
+    } catch { toast.error('Failed to close portal') }
     finally { setSavingTimer(false) }
   }
 
@@ -460,6 +515,19 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
       loadProjects()
     } catch { toast.error('Failed to clear data') }
     finally { setClearingProject(null) }
+  }
+
+  const deleteProject = async (id: string, name: string) => {
+    if (!confirm(`Permanently delete "${name}" and all its departments, groups, and submissions? This cannot be undone.`)) return
+    setDeletingProject(id)
+    try {
+      const res = await fetch(`/api/admin/projects?id=${id}`, { method: 'DELETE' })
+      if (!res.ok) { const err = await res.json(); toast.error(err.error || 'Failed'); return }
+      setProjects(prev => prev.filter(p => p.id !== id))
+      if (filterProject === id) setFilterProject('')
+      toast.success(`"${name}" deleted`)
+    } catch { toast.error('Failed to delete project') }
+    finally { setDeletingProject(null) }
   }
 
   const startEdit = (s: Submission) => {
@@ -563,8 +631,10 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
   const uniqueStudentDepts = Array.from(new Set(allStudents.map(st => st.department))).sort()
   const uniqueStudentGroups = Array.from(new Set(allStudents.map(st => st.groupNumber))).sort((a, b) => a - b)
 
-  const exportPDF = () => {
-    if (submissions.length === 0) {
+  const exportPDF = (fromSubmissions?: Submission[], fromDepartments?: Department[]) => {
+    const subs = fromSubmissions || submissions
+    const depts = fromDepartments || departments
+    if (subs.length === 0) {
       toast.error('No submissions to export')
       return
     }
@@ -581,9 +651,9 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
     const TEXT_MUTED: [number, number, number] = [100, 130, 120]
     const TEXT_DARK: [number, number, number] = [30, 50, 40]
 
-    const totalStudents = submissions.reduce((a, s) => a + s.members.length, 0)
-    const uniqueProjects = new Set(submissions.map(s => s.project_name)).size
-    const grouped = submissions.reduce<Record<string, Submission[]>>((acc, s) => {
+    const totalStudents = subs.reduce((a, s) => a + s.members.length, 0)
+    const uniqueProjects = new Set(subs.map(s => s.project_name)).size
+    const grouped = subs.reduce<Record<string, Submission[]>>((acc, s) => {
       if (!acc[s.department]) acc[s.department] = []
       acc[s.department].push(s)
       return acc
@@ -633,7 +703,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
     const cardW = (pw - 56) / 4
     const metrics: [string, string, [number, number, number]][] = [
       ['Departments', `${deptNames.length}`, MID],
-      ['Submissions', `${submissions.length}`, LIGHT],
+      ['Submissions', `${subs.length}`, LIGHT],
       ['Students', `${totalStudents}`, ACCENT],
       ['Projects', `${uniqueProjects}`, [245, 180, 50]],
     ]
@@ -655,13 +725,13 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
       startY: yPos,
       head: [['Key Performance Indicator', 'Value']],
       body: [
-        ['Departments Registered', `${departments.length}`],
+        ['Departments Registered', `${depts.length}`],
         ['Departments with Submissions', `${deptNames.length}`],
-        ['Total Submissions', `${submissions.length}`],
+        ['Total Submissions', `${subs.length}`],
         ['Total Students', `${totalStudents}`],
         ['Unique Projects', `${uniqueProjects}`],
-        ['Avg Students per Submission', `${(totalStudents / submissions.length).toFixed(1)}`],
-        ['Avg Submissions per Dept', `${(submissions.length / Math.max(deptNames.length, 1)).toFixed(1)}`],
+        ['Avg Students per Submission', `${(totalStudents / subs.length).toFixed(1)}`],
+        ['Avg Submissions per Dept', `${(subs.length / Math.max(deptNames.length, 1)).toFixed(1)}`],
       ],
       theme: 'grid',
       headStyles: { fillColor: MID, fontSize: 10, halign: 'center' },
@@ -681,7 +751,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
 
     const deptRows = deptNames.map(dept => {
       const subs = grouped[dept]
-      const deptInfo = departments.find(d => d.department === dept)
+      const deptInfo = depts.find(d => d.department === dept)
       return [
         dept,
         deptInfo?.rep_name || '\u2014',
@@ -714,7 +784,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
 
     deptNames.forEach((dept) => {
       const deptSubs = grouped[dept]
-      const deptInfo = departments.find(d => d.department === dept)
+      const deptInfo = depts.find(d => d.department === dept)
 
       if (yPos > ph - 70) {
         drawFooter(pageNum)
@@ -821,7 +891,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
     yPos = 36
     pageNum++
 
-    const allStudents = submissions.flatMap(s =>
+    const allStudents = subs.flatMap(s =>
       (s.members || []).map((m: any, idx: number) => {
         let n: string, mat: string
         if (typeof m === 'string') {
@@ -873,6 +943,41 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
 
     doc.save(`AcademiHub-Report-${Date.now()}.pdf`)
     toast.success('PDF exported!')
+  }
+
+  const handlePdfExport = async () => {
+    const selected = pdfSelectedProjects
+    if (selected.length === 0 || selected.length === projects.length) {
+      exportPDF()
+      return
+    }
+    setExportPdfLoading(true)
+    try {
+      const results = await Promise.all(selected.map(async (pid) => {
+        const [dRes, sRes] = await Promise.all([
+          fetch(`/api/admin?type=departments&projectId=${pid}`),
+          fetch(`/api/admin?type=submissions&projectId=${pid}`),
+        ])
+        return {
+          depts: ((await dRes.json()).departments || []) as Department[],
+          subs: ((await sRes.json()).submissions || []) as Submission[],
+        }
+      }))
+      const mergedSubs = results.flatMap(r => r.subs)
+      const mergedDepts = results.flatMap(r => r.depts)
+      setShowPdfOptions(false)
+      exportPDF(mergedSubs, mergedDepts)
+    } catch {
+      toast.error('Failed to load data for PDF')
+    } finally {
+      setExportPdfLoading(false)
+    }
+  }
+
+  const togglePdfProject = (id: string) => {
+    setPdfSelectedProjects(prev =>
+      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+    )
   }
 
   const filteredSubmissions = submissions.filter(s => {
@@ -936,16 +1041,68 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
           </Link>
           <div className="nav-links">
             <span className="badge badge-violet">Admin Panel</span>
+            {projects.length > 0 && (
+              <select
+                className="input select"
+                value={filterProject}
+                onChange={e => { setFilterProject(e.target.value); setPdfSelectedProjects([]); }}
+                style={{ width: 200, fontSize: 12, padding: '6px 10px' }}
+              >
+                <option value="">All Projects</option>
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            )}
             <button onClick={loadData} className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               {loading ? <span className="spinner" /> : <RefreshCw size={14} />} Refresh
             </button>
-            <button onClick={exportPDF} className="btn btn-cyan" style={{ fontSize: 12, padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <button onClick={() => { setPdfSelectedProjects(filterProject ? [filterProject] : []); setShowPdfOptions(true); }} className="btn btn-cyan" style={{ fontSize: 12, padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <Download size={14} /> Export PDF Report
             </button>
             <ThemeToggle />
+            <button onClick={() => setMenuOpen(true)} className="mobile-menu-btn" aria-label="Open menu">
+              <Menu size={20} />
+            </button>
           </div>
         </div>
       </nav>
+
+      {menuOpen && (
+        <div className="mobile-overlay">
+          <div className="mobile-overlay-header">
+            <Link href="/" className="nav-logo" onClick={() => setMenuOpen(false)}>
+              <div className="nav-logo-icon"><GraduationCap size={20} /></div>
+              <span className="nav-logo-text gradient-text">AcademiHub</span>
+            </Link>
+            <button onClick={() => setMenuOpen(false)} className="mobile-menu-btn">
+              <X size={20} />
+            </button>
+          </div>
+          <div className="mobile-overlay-body">
+            {tabs.map(t => (
+              <button key={t.id} onClick={() => { setTab(t.id); setMenuOpen(false) }}
+                className="mobile-overlay-link" style={{ color: tab === t.id ? 'var(--primary-light)' : undefined }}>
+                {t.icon} {t.label}
+              </button>
+            ))}
+            <div className="mobile-overlay-divider" />
+            <button onClick={loadData} className="mobile-overlay-link">
+              <RefreshCw size={18} /> Refresh Data
+            </button>
+            <button onClick={() => { setPdfSelectedProjects(filterProject ? [filterProject] : []); setShowPdfOptions(true); setMenuOpen(false) }}
+              className="mobile-overlay-link">
+              <Download size={18} /> Export PDF Report
+            </button>
+            <Link href="/" className="mobile-overlay-link" onClick={() => setMenuOpen(false)}>
+              <ArrowLeft size={18} /> Back to Home
+            </Link>
+          </div>
+          <div className="mobile-overlay-footer">
+            AcademiHub &middot; Admin Panel
+          </div>
+        </div>
+      )}
 
       <div className="admin-layout">
         <aside className="sidebar">
@@ -1388,7 +1545,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
                   >
                     Grid Cards
                   </button>
-                  <button onClick={exportPDF} className="btn btn-cyan" style={{ fontSize: 12 }}>
+                  <button onClick={() => { setPdfSelectedProjects(filterProject ? [filterProject] : []); setShowPdfOptions(true); }} className="btn btn-cyan" style={{ fontSize: 12 }}>
                     <Download size={14} /> Export PDF
                   </button>
                 </div>
@@ -1741,6 +1898,10 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
                           disabled={clearingProject === p.id}>
                           {clearingProject === p.id ? <><span className="spinner" /> Clearing...</> : 'Clear Data'}
                         </button>
+                        <button onClick={() => deleteProject(p.id, p.name)} className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 12px', color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }}
+                          disabled={deletingProject === p.id}>
+                          {deletingProject === p.id ? <><span className="spinner" /> Deleting...</> : 'Delete'}
+                        </button>
                       </div>
                     </div>
                   )
@@ -1806,9 +1967,15 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <button onClick={saveTimer} className="btn btn-primary" disabled={savingTimer}>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <button onClick={() => saveTimer()} className="btn btn-primary" disabled={savingTimer}>
                     {savingTimer ? <><span className="spinner" /> Saving...</> : 'Set Timer & Notify All'}
+                  </button>
+                  <button onClick={() => saveTimer(notifyProjectId || undefined)} className="btn btn-cyan" disabled={savingTimer || !notifyProjectId}>
+                    {savingTimer ? <><span className="spinner" /> Saving...</> : 'Set Timer & Notify Project'}
+                  </button>
+                  <button onClick={() => saveTimer(undefined, true)} className="btn btn-secondary" disabled={savingTimer}>
+                    {savingTimer ? <><span className="spinner" /> Saving...</> : 'Set Timer (No Notification)'}
                   </button>
                   {existingTimer && (
                     <button onClick={clearTimer} className="btn btn-danger" disabled={savingTimer}>
@@ -1816,18 +1983,56 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
                     </button>
                   )}
                 </div>
+
+                {projects.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <label className="label">Notify a specific project (optional)</label>
+                    <select
+                      className="input select"
+                      value={notifyProjectId}
+                      onChange={e => setNotifyProjectId(e.target.value)}
+                    >
+                      <option value="">-- Notify all --</option>
+                      {projects.filter(p => p.active).map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               <div className="card" style={{ maxWidth: 500, padding: 24, marginTop: 20 }}>
                 <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Portal Status</h3>
+                <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{
+                    width: 10, height: 10, borderRadius: '50%', display: 'inline-block',
+                    background: existingTimer && new Date(existingTimer).getTime() <= Date.now() ? '#ef4444' : '#10b981',
+                    boxShadow: existingTimer && new Date(existingTimer).getTime() <= Date.now() ? '0 0 8px #ef4444' : '0 0 8px #10b981',
+                  }} />
+                  <span style={{ fontSize: 14, fontWeight: 600, color: existingTimer && new Date(existingTimer).getTime() <= Date.now() ? '#fca5a5' : 'var(--primary-light)' }}>
+                    {existingTimer && new Date(existingTimer).getTime() > Date.now() ? 'Closing Soon (Timer Set)' : existingTimer ? 'Closed' : 'Open'}
+                  </span>
+                </div>
                 <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 16, lineHeight: 1.6 }}>
-                  The portal is currently {existingTimer && new Date(existingTimer).getTime() > Date.now() ? 'set to close on a timer' : existingTimer ? 'closed' : 'open'}. 
-                  Click below to immediately open or close the portal.
+                  {existingTimer && new Date(existingTimer).getTime() > Date.now()
+                    ? `Scheduled to close at ${new Date(existingTimer).toLocaleString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Lagos' })} (WAT)`
+                    : existingTimer ? 'The portal is closed. Submissions are not being accepted.'
+                    : 'The portal is open. Submissions are being accepted.'}
                 </p>
-                <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {(existingTimer && new Date(existingTimer).getTime() <= Date.now()) || (!existingTimer) ? (
+                    <button onClick={openPortal} className="btn btn-cyan" disabled={savingTimer}>
+                      {savingTimer ? <><span className="spinner" /> Opening...</> : 'Open Portal Now'}
+                    </button>
+                  ) : null}
+                  {(!existingTimer || (existingTimer && new Date(existingTimer).getTime() > Date.now())) ? (
+                    <button onClick={closePortal} className="btn btn-danger" disabled={savingTimer}>
+                      {savingTimer ? <><span className="spinner" /> Closing...</> : 'Close Portal Now'}
+                    </button>
+                  ) : null}
                   {existingTimer && (
-                    <button onClick={clearTimer} className="btn btn-cyan" disabled={savingTimer}>
-                      Open Portal Now
+                    <button onClick={clearTimer} className="btn btn-secondary" disabled={savingTimer}>
+                      Clear Timer
                     </button>
                   )}
                 </div>
@@ -2070,6 +2275,89 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
               </button>
               <button onClick={executeDeleteGroup} className="btn btn-danger" disabled={deletingGroup}>
                 {deletingGroup ? <><span className="spinner" /> Deleting...</> : 'Delete Group'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PDF Export Options Modal */}
+      {showPdfOptions && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          }}
+          onClick={() => !exportPdfLoading && setShowPdfOptions(false)}
+        >
+          <div
+            className="card"
+            style={{ width: '100%', maxWidth: 460, margin: 24 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>Export PDF Report</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20 }}>
+              Select one or more projects to include in the report.
+            </p>
+
+            <div style={{ marginBottom: 16 }}>
+              <label
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+                  borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600,
+                  background: pdfSelectedProjects.length === projects.length ? 'rgba(6,182,212,0.08)' : 'transparent',
+                  border: `1px solid ${pdfSelectedProjects.length === projects.length ? 'var(--cyan-light)' : 'var(--border)'}`,
+                  marginBottom: 8,
+                }}
+                onClick={() => {
+                  if (pdfSelectedProjects.length === projects.length) {
+                    setPdfSelectedProjects([])
+                  } else {
+                    setPdfSelectedProjects(projects.map(p => p.id))
+                  }
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={pdfSelectedProjects.length === projects.length}
+                  readOnly
+                  style={{ accentColor: 'var(--primary)' }}
+                />
+                <span>All Projects ({projects.length})</span>
+              </label>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 240, overflowY: 'auto' }}>
+                {projects.map(p => (
+                  <label
+                    key={p.id}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10, padding: '6px 12px',
+                      borderRadius: 6, cursor: 'pointer', fontSize: 13,
+                      background: pdfSelectedProjects.includes(p.id) ? 'rgba(5,150,105,0.06)' : 'transparent',
+                      transition: 'background 0.15s',
+                    }}
+                    onClick={() => togglePdfProject(p.id)}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={pdfSelectedProjects.includes(p.id)}
+                      readOnly
+                      style={{ accentColor: 'var(--primary)' }}
+                    />
+                    <span>{p.name}</span>
+                    {p.active && <span className="badge badge-violet" style={{ fontSize: 9 }}>Active</span>}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+              <button onClick={() => setShowPdfOptions(false)} className="btn btn-secondary" disabled={exportPdfLoading}>
+                Cancel
+              </button>
+              <button onClick={handlePdfExport} className="btn btn-cyan" disabled={exportPdfLoading}>
+                {exportPdfLoading ? <><span className="spinner" /> Generating...</> : `Generate PDF (${pdfSelectedProjects.length || 'All'} project${pdfSelectedProjects.length !== 1 ? 's' : ''})`}
               </button>
             </div>
           </div>

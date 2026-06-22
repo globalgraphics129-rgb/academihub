@@ -38,32 +38,33 @@ function baseTemplate(title: string, content: string) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>${title}</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Poppins', Arial, sans-serif; background: #0a0a0f; color: #e2e8f0; }
-    .wrapper { max-width: 600px; margin: 0 auto; padding: 40px 20px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #0a0a0f; color: #e2e8f0; }
+    .wrapper { max-width: 560px; margin: 0 auto; padding: 40px 20px; }
     .card { background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%); border: 1px solid rgba(5,150,105,0.3); border-radius: 16px; overflow: hidden; }
-    .header { background: linear-gradient(135deg, #059669 0%, #0d9488 50%, #14b8a6 100%); padding: 40px 32px; text-align: center; }
-    .header h1 { color: #fff; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
-    .header p { color: rgba(255,255,255,0.8); font-size: 13px; margin-top: 6px; }
-    .body { padding: 32px; }
-    .greeting { font-size: 18px; font-weight: 600; color: #34d399; margin-bottom: 16px; }
-    .text { font-size: 14px; line-height: 1.7; color: #94a3b8; margin-bottom: 20px; }
-    .summary-box { background: rgba(5,150,105,0.1); border: 1px solid rgba(5,150,105,0.25); border-radius: 12px; padding: 20px; margin: 24px 0; }
-    .summary-box h3 { font-size: 13px; font-weight: 700; color: #34d399; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
-    .summary-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(5,150,105,0.1); font-size: 13px; }
-    .summary-row:last-child { border-bottom: none; }
-    .summary-label { color: #64748b; }
-    .summary-value { color: #e2e8f0; font-weight: 500; text-align: right; max-width: 60%; word-break: break-word; }
-    .members-box { background: rgba(13,148,136,0.08); border: 1px solid rgba(13,148,136,0.2); border-radius: 12px; padding: 20px; margin: 24px 0; }
-    .members-box h3 { font-size: 13px; font-weight: 700; color: #2dd4bf; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
-    .member-chip { display: inline-block; background: rgba(13,148,136,0.15); color: #2dd4bf; padding: 4px 12px; border-radius: 20px; font-size: 12px; margin: 4px 4px 4px 0; }
-    .github-btn { display: block; background: linear-gradient(135deg, #059669, #0d9488); color: #fff; text-decoration: none; text-align: center; padding: 14px 24px; border-radius: 10px; font-weight: 600; font-size: 14px; margin: 24px 0; }
-    .support-text { font-size: 13px; color: #64748b; text-align: center; line-height: 1.6; }
-    .support-text a { color: #34d399; }
-    .footer { border-top: 1px solid rgba(5,150,105,0.15); padding: 20px 32px; text-align: center; }
-    .footer p { font-size: 12px; color: #475569; }
-    .badge { display: inline-block; background: rgba(5,150,105,0.2); color: #34d399; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; }
+    .header { background: linear-gradient(135deg, #059669 0%, #0d9488 50%, #14b8a6 100%); padding: 36px 28px; text-align: center; }
+    .header h1 { color: #fff; font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+    .header p { color: rgba(255,255,255,0.75); font-size: 13px; margin-top: 4px; }
+    .body { padding: 28px; }
+    .greeting { font-size: 16px; font-weight: 600; color: #34d399; margin-bottom: 12px; }
+    .text { font-size: 14px; line-height: 1.7; color: #94a3b8; margin-bottom: 16px; }
+    .info-box { background: rgba(5,150,105,0.08); border: 1px solid rgba(5,150,105,0.2); border-radius: 10px; padding: 18px; margin: 20px 0; }
+    .info-box h3 { font-size: 11px; font-weight: 700; color: #34d399; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+    .info-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(5,150,105,0.08); font-size: 13px; }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: #64748b; }
+    .info-value { color: #e2e8f0; font-weight: 500; text-align: right; max-width: 60%; word-break: break-word; }
+    .members-box { background: rgba(13,148,136,0.06); border: 1px solid rgba(13,148,136,0.15); border-radius: 10px; padding: 18px; margin: 20px 0; }
+    .members-box h3 { font-size: 11px; font-weight: 700; color: #2dd4bf; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .member-row { display: flex; justify-content: space-between; padding: 5px 8px; border-bottom: 1px solid rgba(13,148,136,0.06); font-size: 13px; }
+    .member-row:last-child { border-bottom: none; }
+    .member-name { color: #e2e8f0; }
+    .member-matric { color: #2dd4bf; font-family: 'Consolas', 'Courier New', monospace; }
+    .btn { display: block; background: linear-gradient(135deg, #059669, #0d9488); color: #fff; text-decoration: none; text-align: center; padding: 12px 20px; border-radius: 8px; font-weight: 600; font-size: 14px; margin: 20px 0; }
+    .support { font-size: 12px; color: #64748b; text-align: center; line-height: 1.6; }
+    .support a { color: #34d399; }
+    .footer { border-top: 1px solid rgba(5,150,105,0.12); padding: 18px 28px; text-align: center; }
+    .footer p { font-size: 11px; color: #475569; }
   </style>
 </head>
 <body>
@@ -77,8 +78,8 @@ function baseTemplate(title: string, content: string) {
         ${content}
       </div>
       <div class="footer">
-        <p>Need help? Reply to this email — we're here for you.</p>
-        <p style="margin-top:8px">&copy; 2025 AcademiHub &nbsp;·&nbsp; <span class="badge">Project Submission System</span></p>
+        <p>Need assistance? Reply to this email and we will help.</p>
+        <p style="margin-top:6px">&copy; 2025 AcademiHub &nbsp;·&nbsp; Project Submission System</p>
       </div>
     </div>
   </div>
@@ -87,26 +88,27 @@ function baseTemplate(title: string, content: string) {
 }
 
 export async function sendDepartmentRegistrationEmail({
-  repEmail, repName, department, numberOfGroups
+  repEmail, repName, department, numberOfGroups, projectName
 }: {
-  repEmail: string; repName: string; department: string; numberOfGroups: number
+  repEmail: string; repName: string; department: string; numberOfGroups: number; projectName?: string
 }) {
   const content = `
-    <p class="greeting">Hey ${repName}!</p>
-    <p class="text">Your department has been successfully registered. You're all set — groups in your department can now start submitting their projects.</p>
-    <div class="summary-box">
+    <p class="greeting">Hello ${repName},</p>
+    <p class="text">This email confirms that your department has been registered on AcademiHub. Groups in your department can now submit their projects through the platform.</p>
+    <div class="info-box">
       <h3>Registration Summary</h3>
-      <div class="summary-row"><span class="summary-label">Department</span><span class="summary-value">${department}</span></div>
-      <div class="summary-row"><span class="summary-label">Number of Groups</span><span class="summary-value">${numberOfGroups}</span></div>
-      <div class="summary-row"><span class="summary-label">Class Rep</span><span class="summary-value">${repName}</span></div>
-      <div class="summary-row"><span class="summary-label">Status</span><span class="summary-value" style="color:#4ade80">Registered</span></div>
+      <div class="info-row"><span class="info-label">Department</span><span class="info-value">${department}</span></div>
+      ${projectName ? `<div class="info-row"><span class="info-label">Project</span><span class="info-value">${projectName}</span></div>` : ''}
+      <div class="info-row"><span class="info-label">Number of Groups</span><span class="info-value">${numberOfGroups}</span></div>
+      <div class="info-row"><span class="info-label">Class Representative</span><span class="info-value">${repName}</span></div>
+      <div class="info-row"><span class="info-label">Status</span><span class="info-value" style="color:#4ade80">Confirmed</span></div>
     </div>
-    <p class="text">Share the submission link with your group leaders so they can upload their work. The admin will be notified as submissions come in.</p>
-    <p class="support-text">Questions? Reply to this email at <a href="mailto:${REPLY_TO}">${REPLY_TO}</a></p>
+    <p class="text">Please share the AcademiHub link with your group leaders so they can register their groups and submit their projects. The lecturer will be able to review all submissions through the admin panel.</p>
+    <p class="support">Questions? Reply to this email at <a href="mailto:${REPLY_TO}">${REPLY_TO}</a></p>
   `
   return sendEmail({
     to: [{ email: repEmail, name: repName }],
-    subject: `${department} Registered — AcademiHub`,
+    subject: `${department} Registration Confirmed — AcademiHub`,
     htmlContent: baseTemplate('Department Registered', content),
   })
 }
@@ -120,31 +122,29 @@ export async function sendProjectSubmissionEmail({
   projectName: string; githubLink: string; members: Member[]
 }) {
   const memberRows = members.map(m => `
-    <div style="display:flex;justify-content:space-between;padding:6px 10px;border-bottom:1px solid rgba(13,148,136,0.1);font-size:13px;">
-      <span style="color:#e2e8f0">${m.name}</span>
-      <span style="color:#2dd4bf;font-family:monospace">${m.matric || '—'}</span>
+    <div class="member-row">
+      <span class="member-name">${m.name}</span>
+      <span class="member-matric">${m.matric || '—'}</span>
     </div>
   `).join('')
   const content = `
-    <p class="greeting">Submission received, ${leaderName}!</p>
-    <p class="text">Your group's project has been successfully submitted. The lecturer will be able to view all submissions through the admin panel. Here's a summary of what was submitted:</p>
-    <div class="summary-box">
+    <p class="greeting">Dear ${leaderName},</p>
+    <p class="text">Your project has been submitted successfully. The lecturer can now review your submission through the admin panel. Below is a summary of the submitted information.</p>
+    <div class="info-box">
       <h3>Submission Details</h3>
-      <div class="summary-row"><span class="summary-label">Project Name</span><span class="summary-value">${projectName}</span></div>
-      <div class="summary-row"><span class="summary-label">Department</span><span class="summary-value">${department}</span></div>
-      <div class="summary-row"><span class="summary-label">Group Number</span><span class="summary-value">Group ${groupNumber}</span></div>
-      <div class="summary-row"><span class="summary-label">GitHub Link</span><span class="summary-value"><a href="${githubLink}" style="color:#2dd4bf">${githubLink}</a></span></div>
-      <div class="summary-row"><span class="summary-label">Submitted By</span><span class="summary-value">${leaderName}</span></div>
-      <div class="summary-row"><span class="summary-label">Status</span><span class="summary-value" style="color:#4ade80">Submitted</span></div>
+      <div class="info-row"><span class="info-label">Project Title</span><span class="info-value">${projectName}</span></div>
+      <div class="info-row"><span class="info-label">Department</span><span class="info-value">${department}</span></div>
+      <div class="info-row"><span class="info-label">Group</span><span class="info-value">Group ${groupNumber}</span></div>
+      <div class="info-row"><span class="info-label">GitHub Repository</span><span class="info-value"><a href="${githubLink}" style="color:#2dd4bf">${githubLink}</a></span></div>
+      <div class="info-row"><span class="info-label">Submitted by</span><span class="info-value">${leaderName}</span></div>
+      <div class="info-row"><span class="info-label">Status</span><span class="info-value" style="color:#4ade80">Confirmed</span></div>
     </div>
     <div class="members-box">
       <h3>Group Members (${members.length})</h3>
-      <div style="background:rgba(13,148,136,0.05);border-radius:8px;overflow:hidden;">
-        ${memberRows}
-      </div>
+      ${memberRows}
     </div>
-    <a href="${githubLink}" class="github-btn">View Project on GitHub</a>
-    <p class="support-text">If you need to make changes or have questions, reply to this email at <a href="mailto:${REPLY_TO}">${REPLY_TO}</a></p>
+    <a href="${githubLink}" class="btn">View Repository on GitHub</a>
+    <p class="support">If you need to make changes or have questions, reply to this email at <a href="mailto:${REPLY_TO}">${REPLY_TO}</a></p>
   `
   return sendEmail({
     to: [{ email: leaderEmail, name: leaderName }],
@@ -159,15 +159,13 @@ export async function sendCustomAdminEmail({
   toEmail: string; toName: string; subject: string; message: string
 }) {
   const content = `
-    <div style="background:rgba(5,150,105,0.08);border:1px solid rgba(5,150,105,0.2);border-radius:12px;padding:24px;margin:16px 0;">
-      <p class="text" style="white-space:pre-wrap;line-height:1.8;">${message}</p>
-    </div>
-    <p class="support-text">This message was sent to you by the AcademiHub admin. Reply to this email if you have questions.</p>
+    <p class="text" style="white-space:pre-wrap;line-height:1.8;">${message}</p>
+    <p class="support">This message was sent by the AcademiHub admin. If you have any questions, please reply to this email.</p>
   `
   return sendEmail({
     to: [{ email: toEmail, name: toName }],
     subject,
-    htmlContent: baseTemplate('Message from Admin', content),
+    htmlContent: baseTemplate('Message from AcademiHub Admin', content),
   })
 }
 
@@ -181,7 +179,7 @@ export async function sendBulkNotification({
   if (recipients.length === 0) return
   const content = `
     <p class="text" style="white-space:pre-wrap;line-height:1.8;">${message}</p>
-    <p class="support-text">This is an automated message from AcademiHub. Reply to this email if you have questions.</p>
+    <p class="support">This is an automated message from AcademiHub. If you have any questions, please reply to this email.</p>
   `
   for (let i = 0; i < recipients.length; i += 50) {
     const batch = recipients.slice(i, i + 50)
@@ -199,18 +197,56 @@ export async function sendPortalClosedReportToAdmin({
   summary: string
 }) {
   const content = `
-    <p class="greeting">Portal Closed — Final Report</p>
-    <p class="text">The project submission portal has been closed. All submissions are now final.</p>
-    <div class="summary-box">
+    <p class="greeting">Portal Closure Report</p>
+    <p class="text">The project submission portal has been closed. All submissions are now final and available for review in the admin panel.</p>
+    <div class="info-box">
       <h3>Submission Summary</h3>
       <div style="white-space:pre-wrap;font-size:13px;line-height:1.8;color:#e2e8f0;">${summary}</div>
     </div>
-    <p class="support-text">You can view the full report in the admin panel at any time.</p>
+    <p class="support">You may view the complete report from the admin dashboard at any time.</p>
   `
   return sendEmail({
     to: [{ email: 'globalgraphics129@gmail.com', name: 'Admin' }],
-    subject: 'AcademiHub Portal Closed — Final Submission Report',
-    htmlContent: baseTemplate('Portal Closed Report', content),
+    subject: 'AcademiHub Portal Closure — Submission Report',
+    htmlContent: baseTemplate('Portal Closure Report', content),
+  })
+}
+
+export async function sendStudentConfirmationCode({ email, name, code }: {
+  email: string; name: string; code: string
+}) {
+  const content = `
+    <p class="greeting">Hello ${name},</p>
+    <p class="text">Welcome to AcademiHub! Use the confirmation code below to verify your email address and complete your registration.</p>
+    <div style="text-align:center;padding:24px 0;">
+      <span style="display:inline-block;font-size:36px;font-weight:800;letter-spacing:8px;padding:16px 32px;border-radius:12px;background:rgba(5,150,105,0.1);border:1px solid rgba(5,150,105,0.3);color:#34d399;font-family:monospace;">${code}</span>
+    </div>
+    <p class="text" style="font-size:13px;">This code expires in 15 minutes. If you did not request this, please ignore this email.</p>
+    <p class="support">Questions? Reply to this email at <a href="mailto:${REPLY_TO}">${REPLY_TO}</a></p>
+  `
+  return sendEmail({
+    to: [{ email, name }],
+    subject: 'Your AcademiHub Confirmation Code',
+    htmlContent: baseTemplate('Confirmation Code', content),
+  })
+}
+
+export async function sendStudentLoginCode({ email, name, code }: {
+  email: string; name: string; code: string
+}) {
+  const content = `
+    <p class="greeting">Hello ${name},</p>
+    <p class="text">Use the code below to sign in to your AcademiHub student dashboard.</p>
+    <div style="text-align:center;padding:24px 0;">
+      <span style="display:inline-block;font-size:36px;font-weight:800;letter-spacing:8px;padding:16px 32px;border-radius:12px;background:rgba(5,150,105,0.1);border:1px solid rgba(5,150,105,0.3);color:#34d399;font-family:monospace;">${code}</span>
+    </div>
+    <p class="text" style="font-size:13px;">This code expires in 15 minutes. If you did not request this, please ignore this email.</p>
+    <p class="support">Questions? Reply to this email at <a href="mailto:${REPLY_TO}">${REPLY_TO}</a></p>
+  `
+  return sendEmail({
+    to: [{ email, name }],
+    subject: 'Your AcademiHub Login Code',
+    htmlContent: baseTemplate('Login Code', content),
   })
 }
 
@@ -223,10 +259,8 @@ export async function sendAnnouncementEmail({
 }) {
   if (recipients.length === 0) return
   const content = `
-    <div style="background:rgba(5,150,105,0.08);border:1px solid rgba(5,150,105,0.2);border-radius:12px;padding:24px;margin:16px 0;">
-      <p class="text" style="white-space:pre-wrap;line-height:1.8;">${message}</p>
-    </div>
-    <p class="support-text">This is an announcement from AcademiHub. Reply to this email if you have questions.</p>
+    <p class="text" style="white-space:pre-wrap;line-height:1.8;">${message}</p>
+    <p class="support">This is an announcement from AcademiHub. If you have any questions, please reply to this email.</p>
   `
   for (let i = 0; i < recipients.length; i += 50) {
     const batch = recipients.slice(i, i + 50)
