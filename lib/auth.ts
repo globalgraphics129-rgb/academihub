@@ -43,6 +43,24 @@ export async function getSessionUser(token: string) {
   return data.users
 }
 
+export async function verifyAdmin(token: string): Promise<boolean> {
+  if (!token) return false
+
+  // 1. Check if it matches the admin password environment variable
+  const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'academihubadmin2025'
+  if (token === adminPassword) {
+    return true
+  }
+
+  // 2. Check if it is a valid session token for an admin user
+  const user = await getSessionUser(token)
+  if (user && user.role === 'admin') {
+    return true
+  }
+
+  return false
+}
+
 export async function deleteSession(token: string) {
   await supabaseAdmin
     .from('sessions')

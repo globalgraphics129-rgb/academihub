@@ -3,7 +3,8 @@ import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { GraduationCap, Users, Building2, ArrowLeft, ArrowRight, Lock, BookOpen, Menu, X, Rocket } from 'lucide-react'
+import Navbar from '../components/Navbar'
+import { GraduationCap, Users, Building2, ArrowLeft, ArrowRight, Lock, BookOpen, Rocket } from 'lucide-react'
 
 interface Department {
   id: string
@@ -31,7 +32,6 @@ function RegisterGroupInner() {
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
   const [done, setDone] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
 
   const loadDepts = (projId: string) => {
     setFetching(true)
@@ -104,14 +104,7 @@ function RegisterGroupInner() {
   if (done) {
     return (
       <div className="page">
-        <nav className="nav">
-          <div className="nav-inner">
-            <Link href="/" className="nav-logo">
-              <div className="nav-logo-icon"><GraduationCap size={20} /></div>
-              <span className="nav-logo-text gradient-text">AcademiHub</span>
-            </Link>
-          </div>
-        </nav>
+        <Navbar />
         <div className="form-container" style={{ textAlign: 'center', paddingTop: 80 }}>
             <div className="success-icon"><Users size={32} /></div>
           <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12, letterSpacing: -1 }}>
@@ -147,49 +140,7 @@ function RegisterGroupInner() {
 
   return (
     <div className="page">
-      <nav className="nav">
-        <div className="nav-inner">
-          <Link href="/" className="nav-logo">
-            <div className="nav-logo-icon"><GraduationCap size={20} /></div>
-            <span className="nav-logo-text gradient-text">AcademiHub</span>
-          </Link>
-          <div className="nav-links">
-            <Link href="/" className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowLeft size={14} /> Home</Link>
-            <button onClick={() => setMenuOpen(true)} className="mobile-menu-btn" aria-label="Open menu">
-              <Menu size={20} />
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {menuOpen && (
-        <div className="mobile-overlay">
-          <div className="mobile-overlay-header">
-            <Link href="/" className="nav-logo" onClick={() => setMenuOpen(false)}>
-              <div className="nav-logo-icon"><GraduationCap size={20} /></div>
-              <span className="nav-logo-text gradient-text">AcademiHub</span>
-            </Link>
-            <button onClick={() => setMenuOpen(false)} className="mobile-menu-btn">
-              <X size={20} />
-            </button>
-          </div>
-          <div className="mobile-overlay-body">
-            <Link href="/register-department" className="mobile-overlay-link" onClick={() => setMenuOpen(false)}>
-              <Building2 size={18} /> Class Reps
-            </Link>
-            <Link href="/register-group" className="mobile-overlay-link" onClick={() => setMenuOpen(false)}>
-              <Users size={18} /> Groups
-            </Link>
-            <Link href="/submit" className="mobile-overlay-link" onClick={() => setMenuOpen(false)}>
-              <Rocket size={18} /> Submit
-            </Link>
-          </div>
-          <div className="mobile-overlay-footer">
-            AcademiHub &middot; Step 2 of 3
-          </div>
-        </div>
-      )}
-
+      <Navbar />
       <div className="form-container">
         <div style={{ marginBottom: 36, animation: 'fade-up 0.5s ease both' }}>
           <p className="section-eyebrow">Step 2 of 3</p>

@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { verifyAdmin } from '@/lib/auth'
 
 export async function GET(req: NextRequest) {
+  const token = req.headers.get('authorization')?.replace('Bearer ', '') || ''
+  if (!(await verifyAdmin(token))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(req.url)
   const type = searchParams.get('type')
   const projectId = searchParams.get('projectId')
@@ -37,6 +43,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const token = req.headers.get('authorization')?.replace('Bearer ', '') || ''
+  if (!(await verifyAdmin(token))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(req.url)
   const type = searchParams.get('type')
   const id = searchParams.get('id')
@@ -75,6 +86,11 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const token = req.headers.get('authorization')?.replace('Bearer ', '') || ''
+  if (!(await verifyAdmin(token))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(req.url)
   const type = searchParams.get('type')
   const id = searchParams.get('id')
@@ -112,6 +128,11 @@ export async function DELETE(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const token = req.headers.get('authorization')?.replace('Bearer ', '') || ''
+  if (!(await verifyAdmin(token))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(req.url)
   const type = searchParams.get('type')
   const id = searchParams.get('id')

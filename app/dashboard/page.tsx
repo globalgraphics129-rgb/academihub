@@ -3,8 +3,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/hooks/useAuth'
-import ThemeToggle from '../components/ThemeToggle'
-import { GraduationCap, Building2, ClipboardList, Menu, X } from 'lucide-react'
+import Navbar from '../components/Navbar'
+import { GraduationCap, Building2, ClipboardList } from 'lucide-react'
 
 interface GroupInfo {
   id: string; group_number: number; leader_name: string; leader_email: string;
@@ -26,7 +26,6 @@ export default function DashboardPage() {
   const [aiMessage, setAiMessage] = useState('')
   const [aiReply, setAiReply] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     if (loading) return
@@ -78,59 +77,7 @@ export default function DashboardPage() {
 
   return (
     <div className="page">
-      <nav className="nav">
-        <div className="nav-inner">
-          <Link href="/" className="nav-logo">
-            <div className="nav-logo-icon"><GraduationCap size={20} /></div>
-            <span className="nav-logo-text gradient-text">AcademiHub</span>
-          </Link>
-          <div className="nav-links">
-            <span className="badge badge-violet" style={{ fontSize: 11 }}>
-              {user?.role === 'admin' ? 'Admin' : 'Class Rep'}
-            </span>
-            <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{user?.name}</span>
-            <ThemeToggle />
-            <button onClick={logout} className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 12px' }}>
-              Sign Out
-            </button>
-            <button onClick={() => setMenuOpen(true)} className="mobile-menu-btn" aria-label="Open menu">
-              <Menu size={20} />
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {menuOpen && (
-        <div className="mobile-overlay">
-          <div className="mobile-overlay-header">
-            <Link href="/" className="nav-logo" onClick={() => setMenuOpen(false)}>
-              <div className="nav-logo-icon"><GraduationCap size={20} /></div>
-              <span className="nav-logo-text gradient-text">AcademiHub</span>
-            </Link>
-            <button onClick={() => setMenuOpen(false)} className="mobile-menu-btn">
-              <X size={20} />
-            </button>
-          </div>
-          <div className="mobile-overlay-body">
-            <Link href="/" className="mobile-overlay-link" onClick={() => setMenuOpen(false)}>
-              <Building2 size={18} /> Home
-            </Link>
-            <Link href="/register-department" className="mobile-overlay-link" onClick={() => setMenuOpen(false)}>
-              Register Department
-            </Link>
-            <Link href="/admin" className="mobile-overlay-link mobile-primary" onClick={() => setMenuOpen(false)}>
-              Admin Panel
-            </Link>
-            <div className="mobile-overlay-divider" />
-            <button onClick={() => { logout(); setMenuOpen(false) }} className="mobile-overlay-link">
-              Sign Out
-            </button>
-          </div>
-          <div className="mobile-overlay-footer">
-            AcademiHub &middot; Dashboard
-          </div>
-        </div>
-      )}
+      <Navbar />
 
       <div className="container" style={{ paddingTop: 40, paddingBottom: 60 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>

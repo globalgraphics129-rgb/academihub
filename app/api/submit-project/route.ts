@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
   const { data: submission, error: sErr } = await supabaseAdmin
     .from('submissions')
     .insert({
+      project_id: group.project_id,
       group_id: groupId,
       department,
       group_number: group.group_number,

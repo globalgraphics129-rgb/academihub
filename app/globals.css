@@ -888,7 +888,17 @@ html.light .mono {
   display: none;
 }
 
+/* Hide top horizontal tabs bar on desktop by default */
+.admin-tabs-bar {
+  display: none;
+}
+
 @media (max-width: 768px) {
+  .nav-links > .nav-link,
+  .nav-links > .btn {
+    display: none !important;
+  }
+
   .mobile-menu-btn {
     display: inline-flex;
     align-items: center;
@@ -992,7 +1002,13 @@ html.light .mono {
   /* Admin responsive */
   .admin-layout { grid-template-columns: 1fr; }
   .sidebar { display: none; }
-  .admin-tabs-bar { overflow-x: auto; gap: 6px; }
+  .admin-tabs-bar { 
+    display: flex !important; 
+    gap: 8px; 
+    margin-bottom: 28px; 
+    overflow-x: auto; 
+    padding-bottom: 8px; 
+  }
   .admin-tabs-bar .btn { font-size: 11px !important; padding: 6px 10px !important; white-space: nowrap; }
 
   /* Grid & layout responsive */

@@ -1,12 +1,12 @@
-﻿'use client'
+'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { parseMatric, parseMemberEntry, fmtMembers } from '@/lib/matric'
-import ThemeToggle from '../components/ThemeToggle'
-import { GraduationCap, Building2, Users, Package, Send, Timer, LayoutDashboard, BarChart3, Lock, ArrowLeft, ArrowRight, Download, RefreshCw, ExternalLink, Plus, ChevronDown, ChevronRight, Mail, Edit, Trash2, X, Check, User, Search, Globe, FileText, Rocket, BookOpen, List, Grid3X3, Settings, Bell, ClipboardList, UserPlus, TriangleAlert, Menu } from 'lucide-react'
+import Navbar from '../components/Navbar'
+import { GraduationCap, Building2, Users, Package, Send, Timer, LayoutDashboard, BarChart3, Lock, ArrowLeft, ArrowRight, Download, RefreshCw, ExternalLink, Plus, ChevronDown, ChevronRight, Mail, Edit, Trash2, X, Check, User, Search, Globe, FileText, Rocket, BookOpen, List, Grid3X3, Settings, Bell, ClipboardList, UserPlus, TriangleAlert } from 'lucide-react'
 
 interface Member {
   name: string; matric: string;
@@ -40,6 +40,15 @@ interface StudentEntry {
 }
 
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'academihubadmin'
+
+const adminFetch = async (url: string, init: RequestInit = {}) => {
+  const token = typeof window !== 'undefined' ? (localStorage.getItem('ah-token') || localStorage.getItem('token') || '') : ''
+  const headers = {
+    ...init.headers,
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+  }
+  return fetch(url, { ...init, headers })
+}
 
 type Tab = 'overview' | 'departments' | 'submissions' | 'students' | 'announcements' | 'projects' | 'settings'
 
@@ -100,12 +109,36 @@ export default function AdminPage() {
   const [showPdfOptions, setShowPdfOptions] = useState(false)
   const [pdfSelectedProjects, setPdfSelectedProjects] = useState<string[]>([])
   const [exportPdfLoading, setExportPdfLoading] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
+  
 
   const login = () => {
-    if (pw === ADMIN_PASSWORD) { setAuthed(true) }
+    if (pw === ADMIN_PASSWORD) {
+      localStorage.setItem('ah-token', pw)
+      setAuthed(true)
+    }
     else toast.error('Incorrect password')
   }
+
+  useEffect(() => {
+    const token = localStorage.getItem('ah-token') || localStorage.getItem('token')
+    if (!token) return
+    
+    if (token === ADMIN_PASSWORD) {
+      setAuthed(true)
+      return
+    }
+
+    fetch('/api/auth/me', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.user?.role === 'admin') {
+          setAuthed(true)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (authed) loadData()
@@ -119,8 +152,8 @@ export default function AdminPage() {
       const deptUrl = pid ? `/api/admin?type=departments&projectId=${pid}` : '/api/admin?type=departments'
       const subUrl = pid ? `/api/admin?type=submissions&projectId=${pid}` : '/api/admin?type=submissions'
       const [dRes, sRes] = await Promise.all([
-        fetch(deptUrl),
-        fetch(subUrl),
+        adminFetch(deptUrl),
+        adminFetch(subUrl),
       ])
       const dData = await dRes.json()
       const sData = await sRes.json()
@@ -137,7 +170,7 @@ export default function AdminPage() {
 
   const loadProjects = async () => {
     try {
-      const res = await fetch('/api/admin/projects')
+      const res = await adminFetch('/api/admin/projects')
       const data = await res.json()
       setProjects(data.projects || [])
     } catch {}
@@ -147,7 +180,7 @@ export default function AdminPage() {
     if (deptGroups[deptId]) return
     setLoadingGroups(true)
     try {
-      const res = await fetch(`/api/register-group?departmentId=${deptId}`)
+      const res = await adminFetch(`/api/register-group?departmentId=${deptId}`)
       const data = await res.json()
       setDeptGroups(prev => ({ ...prev, [deptId]: data.groups || [] }))
     } catch {
@@ -169,7 +202,7 @@ export default function AdminPage() {
   const deleteSubmission = async (id: string) => {
     if (!confirm('Delete this submission?')) return
     try {
-      await fetch(`/api/admin?type=submission&id=${id}`, { method: 'DELETE' })
+      await adminFetch(`/api/admin?type=submission&id=${id}`, { method: 'DELETE' })
       setSubmissions(prev => prev.filter(s => s.id !== id))
       toast.success('Deleted')
     } catch { toast.error('Failed') }
@@ -178,7 +211,7 @@ export default function AdminPage() {
   const deleteDepartment = async (id: string) => {
     if (!confirm('Delete this department and all its groups/submissions?')) return
     try {
-      await fetch(`/api/admin?type=department&id=${id}`, { method: 'DELETE' })
+      await adminFetch(`/api/admin?type=department&id=${id}`, { method: 'DELETE' })
       setDepartments(prev => prev.filter(d => d.id !== id))
       setDeptGroups(prev => { const n = { ...prev }; delete n[id]; return n })
       toast.success('Deleted')
@@ -204,7 +237,7 @@ export default function AdminPage() {
       return
     }
     try {
-      const res = await fetch(`/api/admin?type=department&id=${editDept.id}`, {
+      const res = await adminFetch(`/api/admin?type=department&id=${editDept.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -246,7 +279,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
     }
     setSendingEmail(true)
     try {
-      const res = await fetch('/api/admin/send-email', {
+      const res = await adminFetch('/api/admin/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -271,7 +304,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
   const toggleActive = async (d: Department) => {
     const newActive = !d.active
     try {
-      const res = await fetch(`/api/admin?type=department&id=${d.id}`, {
+      const res = await adminFetch(`/api/admin?type=department&id=${d.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ active: newActive }),
@@ -306,7 +339,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
       return
     }
     try {
-      const res = await fetch(`/api/admin?type=group&id=${editGroup.id}`, {
+      const res = await adminFetch(`/api/admin?type=group&id=${editGroup.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -350,7 +383,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
     if (!deleteGroupTarget) return
     setDeletingGroup(true)
     try {
-      const res = await fetch(`/api/admin?type=group&id=${deleteGroupTarget.id}`, { method: 'DELETE' })
+      const res = await adminFetch(`/api/admin?type=group&id=${deleteGroupTarget.id}`, { method: 'DELETE' })
       if (!res.ok) {
         const err = await res.json()
         toast.error(err.error || 'Failed to delete')
@@ -373,7 +406,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
 
   const loadTimerSettings = async () => {
     try {
-      const res = await fetch('/api/admin/portal-settings')
+      const res = await adminFetch('/api/admin/portal-settings')
       if (!res.ok) return
       const data = await res.json()
       if (data.closes_at) {
@@ -395,7 +428,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
     const closesAt = new Date(`${timerDate}T${timerTime}:00`).toISOString()
     setSavingTimer(true)
     try {
-      const res = await fetch('/api/admin/portal-settings', {
+      const res = await adminFetch('/api/admin/portal-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ closes_at: closesAt, projectId: projectId || null, skipNotify: skipNotify || false }),
@@ -421,7 +454,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
     if (!confirm('Remove the portal timer?')) return
     setSavingTimer(true)
     try {
-      const res = await fetch('/api/admin/portal-settings', {
+      const res = await adminFetch('/api/admin/portal-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ closes_at: null }),
@@ -442,7 +475,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
   const openPortal = async () => {
     setSavingTimer(true)
     try {
-      const res = await fetch('/api/admin/portal-settings', {
+      const res = await adminFetch('/api/admin/portal-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ closes_at: null }),
@@ -461,7 +494,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
     setSavingTimer(true)
     try {
       const now = new Date().toISOString()
-      const res = await fetch('/api/admin/portal-settings', {
+      const res = await adminFetch('/api/admin/portal-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ closes_at: now, skipNotify: true }),
@@ -477,7 +510,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
     if (!newProjectName.trim()) { toast.error('Project name is required'); return }
     setCreatingProject(true)
     try {
-      const res = await fetch('/api/admin/projects', {
+      const res = await adminFetch('/api/admin/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newProjectName.trim(), description: newProjectDesc.trim() || null }),
@@ -494,7 +527,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
 
   const activateProject = async (id: string) => {
     try {
-      const res = await fetch(`/api/admin/projects?id=${id}`, {
+      const res = await adminFetch(`/api/admin/projects?id=${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ active: true }),
@@ -509,7 +542,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
     if (!confirm('This will permanently delete all departments, groups, and submissions for this project. Are you sure?')) return
     setClearingProject(id)
     try {
-      const res = await fetch(`/api/admin/projects/clear?id=${id}`, { method: 'DELETE' })
+      const res = await adminFetch(`/api/admin/projects/clear?id=${id}`, { method: 'DELETE' })
       if (!res.ok) { const err = await res.json(); toast.error(err.error || 'Failed'); return }
       toast.success('Project data cleared')
       loadProjects()
@@ -521,7 +554,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
     if (!confirm(`Permanently delete "${name}" and all its departments, groups, and submissions? This cannot be undone.`)) return
     setDeletingProject(id)
     try {
-      const res = await fetch(`/api/admin/projects?id=${id}`, { method: 'DELETE' })
+      const res = await adminFetch(`/api/admin/projects?id=${id}`, { method: 'DELETE' })
       if (!res.ok) { const err = await res.json(); toast.error(err.error || 'Failed'); return }
       setProjects(prev => prev.filter(p => p.id !== id))
       if (filterProject === id) setFilterProject('')
@@ -555,7 +588,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
   const saveMembers = async (id: string) => {
     const cleaned = editMembers.filter(m => m.name.trim())
     try {
-      const res = await fetch(`/api/admin?type=submission&id=${id}`, {
+      const res = await adminFetch(`/api/admin?type=submission&id=${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ members: cleaned }),
@@ -614,7 +647,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
       return m
     })
     try {
-      const res = await fetch(`/api/admin?type=submission&id=${st.submissionId}`, {
+      const res = await adminFetch(`/api/admin?type=submission&id=${st.submissionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ members: updatedMembers }),
@@ -955,8 +988,8 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
     try {
       const results = await Promise.all(selected.map(async (pid) => {
         const [dRes, sRes] = await Promise.all([
-          fetch(`/api/admin?type=departments&projectId=${pid}`),
-          fetch(`/api/admin?type=submissions&projectId=${pid}`),
+          adminFetch(`/api/admin?type=departments&projectId=${pid}`),
+          adminFetch(`/api/admin?type=submissions&projectId=${pid}`),
         ])
         return {
           depts: ((await dRes.json()).departments || []) as Department[],
@@ -1033,13 +1066,10 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
 
   return (
     <div className="page">
-      <nav className="nav">
-        <div className="nav-inner">
-          <Link href="/" className="nav-logo">
-            <div className="nav-logo-icon"><GraduationCap size={20} /></div>
-            <span className="nav-logo-text gradient-text">AcademiHub</span>
-          </Link>
-          <div className="nav-links">
+      <Navbar
+        isAdmin={true}
+        adminControls={
+          <>
             <span className="badge badge-violet">Admin Panel</span>
             {projects.length > 0 && (
               <select
@@ -1060,49 +1090,12 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
             <button onClick={() => { setPdfSelectedProjects(filterProject ? [filterProject] : []); setShowPdfOptions(true); }} className="btn btn-cyan" style={{ fontSize: 12, padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <Download size={14} /> Export PDF Report
             </button>
-            <ThemeToggle />
-            <button onClick={() => setMenuOpen(true)} className="mobile-menu-btn" aria-label="Open menu">
-              <Menu size={20} />
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {menuOpen && (
-        <div className="mobile-overlay">
-          <div className="mobile-overlay-header">
-            <Link href="/" className="nav-logo" onClick={() => setMenuOpen(false)}>
-              <div className="nav-logo-icon"><GraduationCap size={20} /></div>
-              <span className="nav-logo-text gradient-text">AcademiHub</span>
-            </Link>
-            <button onClick={() => setMenuOpen(false)} className="mobile-menu-btn">
-              <X size={20} />
-            </button>
-          </div>
-          <div className="mobile-overlay-body">
-            {tabs.map(t => (
-              <button key={t.id} onClick={() => { setTab(t.id); setMenuOpen(false) }}
-                className="mobile-overlay-link" style={{ color: tab === t.id ? 'var(--primary-light)' : undefined }}>
-                {t.icon} {t.label}
-              </button>
-            ))}
-            <div className="mobile-overlay-divider" />
-            <button onClick={loadData} className="mobile-overlay-link">
-              <RefreshCw size={18} /> Refresh Data
-            </button>
-            <button onClick={() => { setPdfSelectedProjects(filterProject ? [filterProject] : []); setShowPdfOptions(true); setMenuOpen(false) }}
-              className="mobile-overlay-link">
-              <Download size={18} /> Export PDF Report
-            </button>
-            <Link href="/" className="mobile-overlay-link" onClick={() => setMenuOpen(false)}>
-              <ArrowLeft size={18} /> Back to Home
-            </Link>
-          </div>
-          <div className="mobile-overlay-footer">
-            AcademiHub &middot; Admin Panel
-          </div>
-        </div>
-      )}
+          </>
+        }
+        menuTabs={tabs}
+        currentTab={tab}
+        onTabChange={setTab}
+      />
 
       <div className="admin-layout">
         <aside className="sidebar">
@@ -1140,7 +1133,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
         </aside>
 
         <main style={{ padding: '32px 24px', minWidth: 0 }}>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 28, overflowX: 'auto' }}>
+          <div className="admin-tabs-bar">
             {tabs.map(t => (
               <button
                 key={t.id}
@@ -1802,7 +1795,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
                       }
                       setSendingAnnounce(true)
                       try {
-                        const res = await fetch('/api/admin/announce', {
+                        const res = await adminFetch('/api/admin/announce', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({

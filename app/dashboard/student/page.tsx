@@ -3,10 +3,10 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/hooks/useAuth'
-import ThemeToggle from '../../components/ThemeToggle'
+import Navbar from '../../components/Navbar'
 import {
   GraduationCap, Search, CheckCircle, Clock, Users, Github, Calendar,
-  ArrowLeft, LogOut, BookOpen, Mail, User, TriangleAlert, XCircle, RefreshCw, Menu, X
+  ArrowLeft, LogOut, BookOpen, Mail, User, TriangleAlert, XCircle, RefreshCw
 } from 'lucide-react'
 
 interface SubmissionInfo {
@@ -38,7 +38,6 @@ export default function StudentDashboard() {
   const [settings, setSettings] = useState<PortalSettings | null>(null)
   const [countdown, setCountdown] = useState('')
   const [profile, setProfile] = useState<StudentProfile | null>(null)
-  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     fetch('/api/admin/projects').then(r => r.json()).then(d => {
@@ -139,69 +138,7 @@ export default function StudentDashboard() {
 
   return (
     <div className="page">
-      <nav className="nav">
-        <div className="nav-inner">
-          <Link href="/" className="nav-logo">
-            <div className="nav-logo-icon"><GraduationCap size={20} /></div>
-            <span className="nav-logo-text gradient-text">AcademiHub</span>
-          </Link>
-          <div className="nav-links">
-            <ThemeToggle />
-            {user && (
-              <button onClick={() => {
-                localStorage.removeItem('token'); localStorage.removeItem('user'); router.push('/login')
-              }} className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <LogOut size={14} /> Sign Out
-              </button>
-            )}
-            <button onClick={() => setMenuOpen(true)} className="mobile-menu-btn" aria-label="Open menu">
-              <Menu size={20} />
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {menuOpen && (
-        <div className="mobile-overlay">
-          <div className="mobile-overlay-header">
-            <Link href="/" className="nav-logo" onClick={() => setMenuOpen(false)}>
-              <div className="nav-logo-icon"><GraduationCap size={20} /></div>
-              <span className="nav-logo-text gradient-text">AcademiHub</span>
-            </Link>
-            <button onClick={() => setMenuOpen(false)} className="mobile-menu-btn">
-              <X size={20} />
-            </button>
-          </div>
-          <div className="mobile-overlay-body">
-            <Link href="/" className="mobile-overlay-link" onClick={() => setMenuOpen(false)}>
-              <ArrowLeft size={18} /> Home
-            </Link>
-            <Link href="/dashboard/student" className="mobile-overlay-link" onClick={() => setMenuOpen(false)}>
-              <Search size={18} /> Search
-            </Link>
-            {profile && (
-              <button onClick={() => { setMenuOpen(false); findSubmissionsForEmail(profile.email) }}
-                className="mobile-overlay-link">
-                <RefreshCw size={18} /> Refresh My Submission
-              </button>
-            )}
-            <div className="mobile-overlay-divider" />
-            {user ? (
-              <button onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); router.push('/login'); setMenuOpen(false) }}
-                className="mobile-overlay-link">
-                <LogOut size={18} /> Sign Out
-              </button>
-            ) : (
-              <Link href="/login" className="mobile-overlay-link" onClick={() => setMenuOpen(false)}>
-                Sign In
-              </Link>
-            )}
-          </div>
-          <div className="mobile-overlay-footer">
-            AcademiHub &middot; Student Dashboard
-          </div>
-        </div>
-      )}
+      <Navbar />
 
       <div className="container" style={{ paddingTop: 40, paddingBottom: 60, maxWidth: 900 }}>
         {profile && (

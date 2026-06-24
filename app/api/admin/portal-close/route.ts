@@ -1,8 +1,14 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { sendBulkNotification, sendPortalClosedReportToAdmin } from '@/lib/email'
+import { verifyAdmin } from '@/lib/auth'
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  const token = req.headers.get('authorization')?.replace('Bearer ', '') || ''
+  if (!(await verifyAdmin(token))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   // Check if already notified
   const { data: settings } = await supabaseAdmin
     .from('portal_settings')

@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { sendBulkNotification } from '@/lib/email'
+import { verifyAdmin } from '@/lib/auth'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const token = req.headers.get('authorization')?.replace('Bearer ', '') || ''
+  if (!(await verifyAdmin(token))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { data, error } = await supabaseAdmin
     .from('portal_settings')
     .select('*')
@@ -14,6 +20,11 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const token = req.headers.get('authorization')?.replace('Bearer ', '') || ''
+  if (!(await verifyAdmin(token))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const body = await req.json()
   const { closes_at, projectId } = body
 

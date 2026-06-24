@@ -1,8 +1,8 @@
 'use client'
+import Navbar from './components/Navbar'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import ThemeToggle from './components/ThemeToggle'
-import { GraduationCap, Users, Rocket, Building2, ChevronRight, Lock, ArrowRight, BookOpen, Menu, X } from 'lucide-react'
+import { GraduationCap, Users, Rocket, Building2, ChevronRight, Lock, ArrowRight, BookOpen } from 'lucide-react'
 
 interface Project {
   id: string; name: string; description: string | null; active: boolean; created_at: string;
@@ -10,7 +10,6 @@ interface Project {
 
 export default function Home() {
   const [mounted, setMounted] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
   const [portalOpen, setPortalOpen] = useState(true)
   const [closesAt, setClosesAt] = useState<string | null>(null)
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, mins: 0, secs: 0 })
@@ -123,69 +122,7 @@ export default function Home() {
         }} />
       </div>
 
-      <nav className="nav">
-        <div className="nav-inner">
-          <div className="nav-logo">
-            <div className="nav-logo-icon"><GraduationCap size={20} /></div>
-            <span className="nav-logo-text gradient-text">AcademiHub</span>
-          </div>
-          <div className="nav-links">
-            <Link href="/register-department" className="nav-link">Class Reps</Link>
-            <Link href="/register-group" className="nav-link">Groups</Link>
-            <Link href="/submit" className="nav-link">Submit</Link>
-            <Link href="/dashboard/student" className="nav-link" style={{ fontSize: 11, color: 'var(--text-3)' }}>Search</Link>
-            <ThemeToggle />
-            <Link href="/login" className="nav-link">Sign In</Link>
-            <Link href="/admin" className="btn btn-secondary" style={{ fontSize: 13, padding: '7px 14px' }}>
-              Admin <ArrowRight size={14} />
-            </Link>
-            <button onClick={() => setMenuOpen(true)} className="mobile-menu-btn" aria-label="Open menu">
-              <Menu size={20} />
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {menuOpen && (
-        <div className="mobile-overlay">
-          <div className="mobile-overlay-header">
-            <Link href="/" className="nav-logo" onClick={() => setMenuOpen(false)}>
-              <div className="nav-logo-icon"><GraduationCap size={20} /></div>
-              <span className="nav-logo-text gradient-text">AcademiHub</span>
-            </Link>
-            <button onClick={() => setMenuOpen(false)} className="mobile-menu-btn">
-              <X size={20} />
-            </button>
-          </div>
-          <div className="mobile-overlay-body">
-            <Link href="/register-student" className="mobile-overlay-link" onClick={() => setMenuOpen(false)}>
-              <GraduationCap size={18} /> Students
-            </Link>
-            <Link href="/register-department" className="mobile-overlay-link" onClick={() => setMenuOpen(false)}>
-              <Building2 size={18} /> Class Reps
-            </Link>
-            <Link href="/register-group" className="mobile-overlay-link" onClick={() => setMenuOpen(false)}>
-              <Users size={18} /> Groups
-            </Link>
-            <Link href="/submit" className="mobile-overlay-link" onClick={() => setMenuOpen(false)}>
-              <Rocket size={18} /> Submit
-            </Link>
-            <Link href="/dashboard/student" className="mobile-overlay-link" onClick={() => setMenuOpen(false)}>
-              <GraduationCap size={18} /> Search
-            </Link>
-            <div className="mobile-overlay-divider" />
-            <Link href="/login" className="mobile-overlay-link" onClick={() => setMenuOpen(false)}>
-              Sign In
-            </Link>
-            <Link href="/admin" className="mobile-overlay-link mobile-primary" onClick={() => setMenuOpen(false)}>
-              Admin Panel
-            </Link>
-          </div>
-          <div className="mobile-overlay-footer">
-            AcademiHub &middot; Project Submission System
-          </div>
-        </div>
-      )}
+      <Navbar />
 
       {!portalOpen && (
         <div style={{

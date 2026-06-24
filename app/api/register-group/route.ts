@@ -37,9 +37,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Group ${groupNumber} is already registered in this department.` }, { status: 400 })
   }
 
+  // Get department to retrieve its project_id
+  const { data: dept, error: deptErr } = await supabaseAdmin
+    .from('departments')
+    .select('project_id')
+    .eq('id', departmentId)
+    .single()
+
+  if (deptErr || !dept) {
+    return NextResponse.json({ error: 'Department not found' }, { status: 404 })
+  }
+
   const { data, error } = await supabaseAdmin
     .from('groups')
     .insert({
+      project_id: dept.project_id,
       department_id: departmentId,
       group_number: parseInt(groupNumber),
       leader_name: leaderName,
