@@ -149,7 +149,7 @@ export default function Home() {
               Streamline project team registration, automatically parse members lists, and submit final source files directly to lecturer repositories in seconds.
             </p>
 
-            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+            <div className="hero-btns">
               <Link href="/register-department" className="btn btn-primary" style={{ padding: '14px 28px', fontSize: 14 }}>
                 <Building2 size={16} />
                 Class Reps
@@ -304,7 +304,7 @@ export default function Home() {
       {/* Live Dials / Portal Info Cards */}
       <section style={{ padding: '0 24px 60px', position: 'relative', zIndex: 2 }}>
         <div className="container">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
+          <div className="stats-grid">
             {/* Dept Count */}
             <div className="glow-card" style={{ padding: 24, textAlign: 'center' }}>
               <div style={{ color: 'var(--primary-light)', marginBottom: 8 }}><Building2 size={24} style={{ margin: '0 auto' }} /></div>

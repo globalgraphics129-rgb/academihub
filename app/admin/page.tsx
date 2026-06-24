@@ -1080,7 +1080,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
       <Navbar
         isAdmin={true}
         adminControls={
-          <>
+          <div className="admin-nav-controls">
             <span className="badge badge-violet">Admin Panel</span>
             {projects.length > 0 && (
               <select
@@ -1101,7 +1101,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
             <button onClick={() => { setPdfSelectedProjects(filterProject ? [filterProject] : []); setShowPdfOptions(true); }} className="btn btn-cyan" style={{ fontSize: 12, padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <Download size={14} /> Export PDF Report
             </button>
-          </>
+          </div>
         }
         menuTabs={tabs}
         currentTab={tab}
@@ -1155,6 +1155,31 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
                 {t.icon} {t.label}
               </button>
             ))}
+          </div>
+
+          {/* Mobile Admin Controls Toolbar (visible only on mobile) */}
+          <div className="mobile-admin-toolbar">
+            {projects.length > 0 && (
+              <select
+                className="input select"
+                value={filterProject}
+                onChange={e => { setFilterProject(e.target.value); setPdfSelectedProjects([]); }}
+                style={{ flex: 1, minWidth: 150, fontSize: 12, padding: '8px 12px' }}
+              >
+                <option value="">All Projects</option>
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            )}
+            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+              <button onClick={loadData} className="btn btn-secondary" style={{ flex: 1, fontSize: 12, padding: '10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                {loading ? <span className="spinner" /> : <RefreshCw size={14} />} Refresh
+              </button>
+              <button onClick={() => { setPdfSelectedProjects(filterProject ? [filterProject] : []); setShowPdfOptions(true); }} className="btn btn-cyan" style={{ flex: 1, fontSize: 12, padding: '10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                <Download size={14} /> Export PDF
+              </button>
+            </div>
           </div>
 
           {tab === 'overview' && (
@@ -1243,17 +1268,17 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
                 <h2 style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.5 }}>
                   Students <span style={{ color: 'var(--text-3)', fontSize: 16, fontWeight: 400 }}>({filteredStudents.length})</span>
                 </h2>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div className="filter-row">
                   <input className="input" value={studentSearch} onChange={e => setStudentSearch(e.target.value)}
                     placeholder="Search name, matric, group..."
-                    style={{ width: 200, fontSize: 12, padding: '6px 10px' }} />
+                    style={{ flex: 1, minWidth: 180, fontSize: 12, padding: '6px 10px' }} />
                   <select className="input select" value={studentDeptFilter} onChange={e => setStudentDeptFilter(e.target.value)}
-                    style={{ width: 160, fontSize: 12, padding: '6px 10px' }}>
+                    style={{ flex: 1, minWidth: 140, fontSize: 12, padding: '6px 10px' }}>
                     <option value="">All departments</option>
                     {uniqueStudentDepts.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
                   <select className="input select" value={studentGroupFilter} onChange={e => setStudentGroupFilter(e.target.value)}
-                    style={{ width: 120, fontSize: 12, padding: '6px 10px' }}>
+                    style={{ flex: 1, minWidth: 100, fontSize: 12, padding: '6px 10px' }}>
                     <option value="">All groups</option>
                     {uniqueStudentGroups.map(g => <option key={g} value={g}>Group {g}</option>)}
                   </select>
@@ -1558,7 +1583,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+              <div className="filter-row" style={{ marginBottom: 20 }}>
                 <input
                   className="input"
                   value={search}
@@ -1570,7 +1595,7 @@ I'm writing regarding your registration of ${d.department} on AcademiHub.
                   className="input select"
                   value={filterDept}
                   onChange={e => setFilterDept(e.target.value)}
-                  style={{ width: 200 }}
+                  style={{ flex: 1, minWidth: 150 }}
                 >
                   <option value="">All departments</option>
                   {uniqueDepts.map(d => <option key={d} value={d}>{d}</option>)}

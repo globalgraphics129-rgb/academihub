@@ -1325,3 +1325,100 @@ html.light .mono {
   border: 1px solid rgba(5, 150, 105, 0.2);
 }
 
+/* Mobile Responsiveness Overrides */
+.hero-btns {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 600px) {
+  .hero-btns {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+  .hero-btns > a {
+    width: 100% !important;
+    text-align: center;
+    justify-content: center;
+  }
+  
+  .developer-console {
+    font-size: 11px;
+  }
+  .console-body {
+    padding: 12px;
+    min-height: 220px;
+  }
+  .console-line {
+    font-size: 11px;
+    gap: 4px;
+  }
+  .console-ln {
+    width: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+    gap: 12px;
+  }
+  .stats-dial-ring {
+    width: 80px;
+    height: 80px;
+  }
+  .stats-dial-value {
+    font-size: 20px;
+  }
+}
+
+.admin-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-admin-toolbar {
+  display: none;
+}
+
+.filter-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .admin-nav-controls {
+    display: none !important;
+  }
+  .mobile-admin-toolbar {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border);
+    padding: 16px;
+    border-radius: 12px;
+  }
+  .filter-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-row > .input,
+  .filter-row > .select {
+    width: 100% !important;
+  }
+}
+
